@@ -1,6 +1,6 @@
 /**
  *  Copyright (c) 2010-2013 LG Electronics, Inc.
- * 
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -21,7 +21,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
-#include <sys/statfs.h> 
+#include <sys/statfs.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,7 +72,7 @@ static LSMethod s_methods[] = {
 
 PrefsFactory* PrefsFactory::instance()
 {
-    if (!s_instance)
+	if (!s_instance)
 		new PrefsFactory;
 
 	return s_instance;
@@ -92,24 +92,24 @@ PrefsFactory::~PrefsFactory()
 
 void PrefsFactory::setServiceHandle(LSPalmService* service)
 {
-    m_service = service;
+	m_service = service;
 
 	bool result;
 	LSError lsError;
 	LSErrorInit(&lsError);
-	
+
 	result = LSPalmServiceRegisterCategory( m_service, "/", s_methods, NULL,
 			NULL, this, &lsError);
 	if (!result) {
-            //luna_critical(s_logChannel, "Failed to register methods: %s", lsError.message);
-            qCritical() << "Failed to register methods:" << lsError.message;
-			LSErrorFree(&lsError);
-			return;
-		}
+		//luna_critical(s_logChannel, "Failed to register methods: %s", lsError.message);
+		qCritical() << "Failed to register methods:" << lsError.message;
+		LSErrorFree(&lsError);
+		return;
+	}
 
 	m_serviceHandlePublic = LSPalmServiceGetPublicConnection(m_service);
 	m_serviceHandlePrivate = LSPalmServiceGetPrivateConnection(m_service);
-		
+
 	// Now we can create all the prefs handlers
 	registerPrefHandler(new LocalePrefsHandler(service));
 	registerPrefHandler(new TimePrefsHandler(service));
@@ -120,7 +120,7 @@ void PrefsFactory::setServiceHandle(LSPalmService* service)
 
 LSPalmService* PrefsFactory::serviceHandle() const
 {
-	return m_service;    
+	return m_service;
 }
 
 PrefsHandler* PrefsFactory::getPrefsHandler(const std::string& key) const
@@ -128,15 +128,15 @@ PrefsHandler* PrefsFactory::getPrefsHandler(const std::string& key) const
 	PrefsHandlerMap::const_iterator it = m_handlersMaps.find(key);
 	if (it == m_handlersMaps.end())
 		return 0;
-	
-    return (*it).second;
+
+	return (*it).second;
 }
 
 void PrefsFactory::registerPrefHandler(PrefsHandler* handler)
 {
 	if (!handler)
 		return;
-	
+
 	std::list<std::string> keys = handler->keys();
 	for (std::list<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it)
 		m_handlersMaps[*it] = handler;
@@ -147,9 +147,9 @@ void PrefsFactory::postPrefChange(const std::string& keyStr,const std::string& v
 	LSSubscriptionIter *iter=NULL;
 	LSError lserror;
 	LSHandle * lsHandle;
-	
+
 	LSErrorInit(&lserror);
-	
+
 	std::string reply = std::string("{ \"")+keyStr+std::string("\":")+valueStr+std::string("}");
 	// Find out which handle this subscription needs to go to
 	bool retVal = LSSubscriptionAcquire(m_serviceHandlePublic, keyStr.c_str(), &iter, &lserror);
@@ -169,7 +169,7 @@ void PrefsFactory::postPrefChange(const std::string& keyStr,const std::string& v
 	else {
 		LSErrorFree(&lserror);
 	}
-	
+
 	LSErrorInit(&lserror);
 	iter=NULL;
 	retVal = LSSubscriptionAcquire(m_serviceHandlePrivate, keyStr.c_str(), &iter, &lserror);
@@ -190,7 +190,7 @@ void PrefsFactory::postPrefChange(const std::string& keyStr,const std::string& v
 		LSErrorFree(&lserror);
 	}
 
-	
+
 }
 
 void PrefsFactory::postPrefChangeValueIsCompleteString(const std::string& keyStr,const std::string& json_string)
@@ -198,14 +198,14 @@ void PrefsFactory::postPrefChangeValueIsCompleteString(const std::string& keyStr
 	LSSubscriptionIter *iter=NULL;
 	LSError lserror;
 	LSHandle * lsHandle;
-	
+
 	LSErrorInit(&lserror);
 	//std::string reply = std::string("{ \"")+keyStr+std::string("\":")+valueStr+std::string("}");
 	const std::string reply = json_string;
 	//**DEBUG validate for correct UTF-8 output
 	if (!g_utf8_validate (reply.c_str(), -1, NULL))
 	{
-        qWarning() << "bus reply fails UTF-8 validity check! [" << reply.c_str() << "]";
+		qWarning() << "bus reply fails UTF-8 validity check! [" << reply.c_str() << "]";
 	}
 	// Find out which handle this subscription needs to go to
 	bool retVal = LSSubscriptionAcquire(m_serviceHandlePublic, keyStr.c_str(), &iter, &lserror);
@@ -221,12 +221,12 @@ void PrefsFactory::postPrefChangeValueIsCompleteString(const std::string& keyStr
 		}
 
 		LSSubscriptionRelease(iter);
-			
+
 	}
 	else  {
 		LSErrorFree(&lserror);
 	}
-	
+
 	LSErrorInit(&lserror);
 	iter=NULL;
 	retVal = LSSubscriptionAcquire(m_serviceHandlePrivate, keyStr.c_str(), &iter, &lserror);
@@ -277,20 +277,20 @@ void PrefsFactory::refreshAllKeys()
 
 }
 
-void PrefsFactory::runConsistencyChecksOnAllHandlers() 
+void PrefsFactory::runConsistencyChecksOnAllHandlers()
 {
 	//go through all the handlers
-	
+
 	for (PrefsHandlerMap::iterator it = m_handlersMaps.begin();it != m_handlersMaps.end();++it) {
 		std::string key = it->first;
 		PrefsHandler * handler = it->second;
 		if (handler) {
 			//run the verifier on this key to make sure the pref is correct
 			if (handler->isPrefConsistent() == false) {
-                qWarning() << "reports inconsistency with key [" << key.c_str() << "]. Restoring default...";
+				qWarning() << "reports inconsistency with key [" << key.c_str() << "]. Restoring default...";
 				handler->restoreToDefault();		//something is wrong with this...try and restore it
 				std::string restoreVal = PrefsDb::instance()->getPref(key);
-                qWarning() << "key [" << key.c_str() << "] restored to value [" << restoreVal.c_str() << "]";
+				qWarning() << "key [" << key.c_str() << "] restored to value [" << restoreVal.c_str() << "]";
 				PrefsFactory::instance()->postPrefChange(key,restoreVal);
 			}
 		}
@@ -353,14 +353,14 @@ static bool cbSetPreferences(LSHandle* lsHandle, LSMessage* message,
 {
 	json_object* root = 0;
 	bool result;
-    bool success = true;
+	bool success = true;
 	LSError lsError;
 	LSErrorInit(&lsError);
 	std::string errorText;
 	int savecount=0;
 	int errcount=0;
 	std::string callerId;
-	
+
 	const char* payload = LSMessageGetPayload(message);
 	if (!payload) {
 		success=false;
@@ -382,80 +382,81 @@ static bool cbSetPreferences(LSHandle* lsHandle, LSMessage* message,
 		errorText = std::string("invalid payload type (should be object)");
 		goto Done;
 	}
-	
+
 	callerId = (LSMessageGetApplicationID(message) != 0 ? LSMessageGetApplicationID(message) : "" );
 
-	json_object_object_foreach(root, key, val) {
-		// Is there a preferences handler for this?
+	{
+		json_object_object_foreach(root, key, val) {
+			// Is there a preferences handler for this?
 
-		bool savedPref = false;
-		
-		PrefsHandler* handler = PrefsFactory::instance()->getPrefsHandler(key);
-		
-		if (handler) {
-			PMLOG_TRACE("found handler for %s", key);
-			if (handler->validate(key, val, callerId)) {
- 				qDebug("handler validated value for key [%s]",key);
-				savedPref = PrefsDb::instance()->setPref(key, json_object_to_json_string(val));
+			bool savedPref = false;
+
+			PrefsHandler* handler = PrefsFactory::instance()->getPrefsHandler(key);
+
+			if (handler) {
+				PMLOG_TRACE("found handler for %s", key);
+				if (handler->validate(key, val, callerId)) {
+ 					qDebug("handler validated value for key [%s]",key);
+					savedPref = PrefsDb::instance()->setPref(key, json_object_to_json_string(val));
+				}
+				else {
+					qWarning() << "handler DID NOT validate value for key:" << key;
+				}
 			}
 			else {
-                qWarning() << "handler DID NOT validate value for key:" << key;
+				qWarning() << "setPref did NOT find handler for:" << key;
+
+				//filter out
+				savedPref = PrefsDb::instance()->setPref(key, json_object_to_json_string(val));
+			}
+			qDebug("setPref saved? %s",(savedPref ? "true" : "false"));
+
+			if (savedPref) {
+				++savecount;
+
+				// successfully set the preference. post a notification about it
+
+				json_object* json = 0;
+
+				json = json_object_new_object();
+				json_object_object_add(json, (char*) key, json_object_get(val));
+
+				std::string subKeyStr = std::string(key);
+				std::string subValStr = std::string(json_object_to_json_string(json));
+
+				PrefsFactory::instance()->postPrefChangeValueIsCompleteString(subKeyStr,subValStr);
+
+				// Inform the handler about the change
+				if (handler)
+					handler->valueChanged(key, val);
+
+				json_object_put(json);
+				success=true;
+			}
+			else {
+				++errcount;
 			}
 		}
-		else {
-            qWarning() << "setPref did NOT find handler for:" << key;
-			
-			//filter out 
-			savedPref = PrefsDb::instance()->setPref(key, json_object_to_json_string(val));
-		}
-		qDebug("setPref saved? %s",(savedPref ? "true" : "false"));
-		
-		if (savedPref) {
-			++savecount;
-			
-			// successfully set the preference. post a notification about it
-
-			json_object* json = 0;
-			
-			json = json_object_new_object();
-			json_object_object_add(json, (char*) key, json_object_get(val));
-				
-			std::string subKeyStr = std::string(key);
-			std::string subValStr = std::string(json_object_to_json_string(json));
-			
-			PrefsFactory::instance()->postPrefChangeValueIsCompleteString(subKeyStr,subValStr);
-			
-			// Inform the handler about the change
-			if (handler)
-				handler->valueChanged(key, val);
-			
-			json_object_put(json);
-			success=true;
-		}
-		else {
-			++errcount;
-		}
-		
 	}
-	
+
 	if (errcount) {
 		success=false;
 		errorText=std::string("Some settings could not be saved");
 	}
-	
+
 Done:
 	json_object * result_object = json_object_new_object();
 	json_object_object_add(result_object,(char *)"returnValue",json_object_new_boolean(success));
-    if (!success) {
+	if (!success) {
 		json_object_object_add(result_object,(char *)"errorText",json_object_new_string((char*) errorText.c_str()));
-        qWarning() << errorText.c_str();
-    }
-	
+		qWarning() << errorText.c_str();
+	}
+
 	const char * r = json_object_to_json_string(result_object);
 	result = LSMessageReply(lsHandle, message, r, &lsError);
 	if (!result)
 		LSErrorFree (&lsError);
-	
+
 	json_object_put(result_object);
 	if (root)
 		json_object_put(root);
@@ -529,12 +530,12 @@ Example response for a failed call:
 static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message,
 							 void* user_data)
 {
-    // {"subscribe": boolean, "keys": array}
-    VALIDATE_SCHEMA_AND_RETURN(lsHandle,
-                               message,
-                               SCHEMA_2(REQUIRED(subscribe, boolean), REQUIRED(keys, array)));
+	// {"subscribe": boolean, "keys": array}
+	VALIDATE_SCHEMA_AND_RETURN(lsHandle,
+		message,
+		SCHEMA_2(REQUIRED(subscribe, boolean), REQUIRED(keys, array)));
 
-    bool retVal;
+	bool retVal;
 	LSError lsError;
 	const char* r = 0;
 	std::string reply;
@@ -544,23 +545,23 @@ static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message,
 	array_list* keyArray = 0;
 	std::list<std::string> keyList;
 	std::map<std::string, std::string> resultMap;
-	bool subscription = false;	
+	bool subscription = false;
 	bool success = false;
 	std::string errorCode;
 	PrefsHandler* handler=NULL;
 	std::string key;
 	std::string restoreVal;
-	
+
 	const char* payload = LSMessageGetPayload(message);
 	if (!payload)
 		return false;
-	
+
 	LSErrorInit(&lsError);
-	
+
 	root = json_tokener_parse(payload);
 	if (!root || is_error(root))
 		goto Done;
-	
+
 	label = json_object_object_get(root, "subscribe");
 	if (label && !is_error(label))
 		subscription = json_object_get_boolean(label);
@@ -604,8 +605,8 @@ static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message,
 
 	resultMap = PrefsDb::instance()->getPrefs(keyList);
 
-	if (LSMessageIsSubscription(message)) {		
-		
+	if (LSMessageIsSubscription(message)) {
+
 		for (std::list<std::string>::const_iterator it = keyList.begin();
 			 it != keyList.end(); ++it) {
 			(void) LSSubscriptionAdd(lsHandle, (*it).c_str(),
@@ -617,7 +618,7 @@ static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message,
 		subscription = false;
 
 	replyRoot = json_object_new_object();
-	
+
 	for (std::map<std::string, std::string>::const_iterator it = resultMap.begin();
 		 it != resultMap.end(); ++it) {
 		json_object* value = json_tokener_parse((*it).second.c_str());
@@ -632,28 +633,28 @@ static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message,
 			goto Done;
 		}
 	}
-        json_object_object_add(replyRoot,"subscribed",json_object_new_boolean(subscription));
+	json_object_object_add(replyRoot,"subscribed",json_object_new_boolean(subscription));
 	json_object_object_add(replyRoot,"returnValue",json_object_new_boolean(true));
 	success = true;
-		
+
 Done:
 
 	if (!is_error(replyRoot) && (success))
 		reply = json_object_to_json_string(replyRoot);
-    else {
+	else {
 		reply = "{\"returnValue\":false,\"subscribed\":false , \"errorCode\":\""+errorCode+"\"}";
-        qWarning() << errorCode.c_str();
-    }
+		qWarning() << errorCode.c_str();
+	}
 
 	r = reply.c_str();
-	
+
 	retVal = LSMessageReply(lsHandle, message, r, &lsError);
 	if (!retVal)
 		LSErrorFree (&lsError);
 
 	if (replyRoot && !is_error(replyRoot))
 		json_object_put(replyRoot);
-	
+
 	if (root && !is_error(root))
 		json_object_put(root);
 
@@ -729,12 +730,12 @@ Example response for a failed call:
 static bool cbGetPreferenceValues(LSHandle* lsHandle, LSMessage* message,
 								  void* user_data)
 {
-    // {"key": string}
-    VALIDATE_SCHEMA_AND_RETURN(lsHandle,
-                               message,
-                               SCHEMA_1(REQUIRED(key, string)));
+	// {"key": string}
+	VALIDATE_SCHEMA_AND_RETURN(lsHandle,
+		message,
+		SCHEMA_1(REQUIRED(key, string)));
 
-    bool retVal;
+	bool retVal;
 	LSError lsError;
 	const char* reply = 0;
 	json_object* root = 0;
@@ -743,17 +744,17 @@ static bool cbGetPreferenceValues(LSHandle* lsHandle, LSMessage* message,
 	PrefsHandler* handler = 0;
 	std::string key;
 	bool success = false;
-	
+
 	const char* payload = LSMessageGetPayload(message);
 	if (!payload)
 		return false;
 
 	LSErrorInit(&lsError);
-	
+
 	root = json_tokener_parse(payload);
 	if (!root || is_error(root))
 		goto Done;
-	
+
 	label = json_object_object_get(root, "key");
 	if (!label || is_error(label))
 		goto Done;
@@ -770,7 +771,7 @@ static bool cbGetPreferenceValues(LSHandle* lsHandle, LSMessage* message,
 	json_object_object_add(replyRoot,"returnValue",json_object_new_boolean(true));
 	reply = json_object_to_json_string(replyRoot);
 	success = true;
-		
+
 Done:
 
 	if (!success)
@@ -782,7 +783,7 @@ Done:
 
 	if (replyRoot && !is_error(replyRoot))
 		json_object_put(replyRoot);
-	
+
 	if (root && !is_error(root))
 		json_object_put(root);
 

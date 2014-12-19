@@ -22,7 +22,7 @@
 #include <list>
 #include <map>
 
-#include <cjson/json.h>
+#include <json.h>
 #include <luna-service2/lunaservice.h>
 
 class PrefsHandler

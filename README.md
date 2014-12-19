@@ -126,7 +126,7 @@ Below are the tools and libraries (and their minimum versions) required to build
 * glib-2.0
 * liburiparser
 * libxml-2.0
-* openwebos/cjson
+* json-c 0.11
 * openwebos/cmake-modules-webos 1.0.0 RC2
 * openwebos/luna-service2
 * openwebos/nyx-lib 6.0.0

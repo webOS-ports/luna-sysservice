@@ -18,7 +18,7 @@
 #include <glib.h>
 #include <stdlib.h>
 #include <memory.h>
-#include "cjson/json.h"
+#include <json.h>
 #include "Logging.h"
 #include "Utils.h"
 #include "errno.h"

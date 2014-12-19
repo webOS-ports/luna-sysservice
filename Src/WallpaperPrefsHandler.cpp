@@ -29,7 +29,7 @@
 #include "SystemRestore.h"
 #include "Settings.h"
 
-#include <cjson/json.h>
+#include <json.h>
 #include <glib.h>
 #include "JSONUtils.h"
 

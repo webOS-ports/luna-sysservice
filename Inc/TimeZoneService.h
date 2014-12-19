@@ -20,7 +20,7 @@
 
 #include <luna-service2/lunaservice.h>
 #include <stdint.h>
-#include <cjson/json.h>
+#include <json.h>
 
 #include <list>
 
