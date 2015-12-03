@@ -198,14 +198,16 @@ bool ClockHandler::cbSetTime(LSHandle* lshandle, LSMessage *message, void *user_
 {
 	assert( user_data );
 
-	LSMessageJsonParser parser( message, STRICT_SCHEMA(
+	jvalue_ref schema_v4 = convert_schema_v2_to_v4(STRICT_SCHEMA(
 		PROPS_2(
 			WITHDEFAULT(source, string, "manual"),
 			REQUIRED(utc, integer)
 		)
 
-		REQUIRED_1(utc)
-	));
+		REQUIRED_1( utc )));
+	LSMessageJsonParser parser(message, jvalue_tostring_simple(schema_v4));
+	if (!jis_null(schema_v4))
+	    j_release(&schema_v4);
 
 	if (!parser.parse(__FUNCTION__, lshandle, EValidateAndErrorAlways))
 		return true;
@@ -256,13 +258,16 @@ bool ClockHandler::cbGetTime(LSHandle* lshandle, LSMessage *message, void *user_
 {
 	assert( user_data );
 
-	LSMessageJsonParser parser( message, STRICT_SCHEMA(
+	jvalue_ref schema_v4 = convert_schema_v2_to_v4(STRICT_SCHEMA(
 		PROPS_3(
 			WITHDEFAULT(source, string, "system"),
 			WITHDEFAULT(manualOverride, boolean, false),
 			OPTIONAL(fallback, string)
 		)
-	));
+		));
+	LSMessageJsonParser parser(message, jvalue_tostring_simple(schema_v4));
+	if (!jis_null(schema_v4))
+	    j_release(&schema_v4);
 
 	if (!parser.parse(__FUNCTION__, lshandle, EValidateAndErrorAlways))
 		return true;
