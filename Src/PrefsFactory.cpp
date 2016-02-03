@@ -530,10 +530,10 @@ Example response for a failed call:
 static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message,
 							 void* user_data)
 {
-	// {"subscribe": boolean, "keys": array}
-	VALIDATE_SCHEMA_AND_RETURN(lsHandle,
-		message,
-		SCHEMA_2(REQUIRED(subscribe, boolean), REQUIRED(keys, array)));
+    // {"subscribe": boolean, "keys": array}
+    VALIDATE_SCHEMA_AND_RETURN(lsHandle,
+                               message,
+                               SCHEMA_2(REQUIRED(keys, array),OPTIONAL(subscribe, boolean)));
 
 	bool retVal;
 	LSError lsError;
