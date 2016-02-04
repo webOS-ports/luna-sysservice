@@ -32,7 +32,7 @@
 #include "Logging.h"
 #include "Utils.h"
 
-#include <cjson/json_util.h>
+#include <json_util.h>
 
 #define		BUILDINFO_FILE			WEBOS_INSTALL_WEBOS_SYSCONFDIR "/palm-customization-info"
 

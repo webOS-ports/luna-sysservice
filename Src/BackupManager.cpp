@@ -22,7 +22,7 @@
 #include <string.h>
 #include <map>
 #include "BackupManager.h"
-#include <cjson/json.h>
+#include <json.h>
 #include "PrefsDb.h"
 #include "PrefsFactory.h"
 

@@ -48,7 +48,7 @@ INCLUDES := $(INCLUDES) \
 	`pkg-config --cflags glib-2.0 freetype2`
 
 LIBS := $(LIBS) \
-	-lglib-2.0 -llunaservice -lcjson -lsqlite3 -luriparser -lluna-prefs -lpbnjson_cpp -lQtCore -lQtGui
+	-lglib-2.0 -llunaservice -ljson -lsqlite3 -luriparser -lluna-prefs -lpbnjson_cpp -lQtCore -lQtGui
 
 LOCAL_CFLAGS := $(CFLAGS) -Wall -Werror $(FLAGS_OPT) $(ARCH_CFLAGS)
 

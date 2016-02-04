@@ -38,9 +38,9 @@ webos_add_compiler_flags(ALL ${GXML2_CFLAGS})
 pkg_check_modules(SQLITE3 REQUIRED sqlite3)
 webos_add_compiler_flags(ALL ${SQLITE3_CFLAGS})
 
-# -- check for cjson
-pkg_check_modules(CJSON REQUIRED cjson)
-webos_add_compiler_flags(ALL ${CJSON_CFLAGS})
+# -- check for json-c
+pkg_check_modules(JSON REQUIRED json-c)
+webos_add_compiler_flags(ALL ${JSON_CFLAGS})
 
 # -- check for pbnjson c and cpp libraries
 pkg_check_modules(PBNJSON_C REQUIRED pbnjson_c)
@@ -140,7 +140,7 @@ target_link_libraries(LunaSysService
                       ${GLIB2_LDFLAGS} 
                       ${GXML2_LDFLAGS}
                       ${SQLITE3_LDFLAGS}
-                      ${CJSON_LDFLAGS}
+                      ${JSON_LDFLAGS}
                       ${MJSON_LDFLAGS}
                       ${PBNJSON_C_LDFLAGS}
                       ${PBNJSON_CPP_LDFLAGS}

@@ -22,7 +22,7 @@
 #include <map>
 #include <string>
 #include <list>
-#include <cjson/json.h>
+#include <json.h>
 #include <luna-service2/lunaservice.h>
 
 class BuildInfoHandler : public PrefsHandler

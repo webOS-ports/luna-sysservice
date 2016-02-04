@@ -1,6 +1,6 @@
 /**
  *  Copyright (c) 2010-2013 LG Electronics, Inc.
- * 
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -16,7 +16,7 @@
 
 
 #include <assert.h>
-#include <cjson/json.h>
+#include <json.h>
 #include <glib.h>
 #include <string.h>
 #include <strings.h>
@@ -62,7 +62,7 @@ const char* PrefsDb::s_volumeIconFileAndPathDest = MEDIAPARTITIONPATH ".VolumeIc
 
 const char* PrefsDb::s_sysDefaultWallpaperKey = ".prefsdb.setting.default.wallpaper";
 const char* PrefsDb::s_sysDefaultRingtoneKey = ".prefsdb.setting.default.ringtone";
-	
+
 PrefsDb* PrefsDb::instance()
 {
 	if (!s_instance)
@@ -91,7 +91,7 @@ PrefsDb::PrefsDb()
 , m_dbFilename(s_prefsDbPath)
 , m_deleteOnDestroy(false)
 {
-    s_instance = this;
+	s_instance = this;
 	openPrefsDb();
 }
 
@@ -121,7 +121,7 @@ PrefsDb::~PrefsDb()
 bool PrefsDb::setPref(const std::string& key, const std::string& value)
 {
 	char * queryStr = 0;
-	
+
 	if (!m_prefsDb)
 		return false;
 
@@ -131,18 +131,18 @@ bool PrefsDb::setPref(const std::string& key, const std::string& value)
 	//gchar* queryStr = g_strdup_printf("INSERT INTO Preferences "
 	//								  "VALUES ('%s', '%s')",
 	//								  key.c_str(), value.c_str());
-	
+
 	queryStr = sqlite3_mprintf("INSERT INTO Preferences "
 									  "VALUES (%Q, %Q)",
 									  key.c_str(), value.c_str());
-	
+
 	if (!queryStr)
 		return false;
 
 	int ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
 
 	if (ret) {
-        qWarning("Failed to execute query for key %s", key.c_str());
+		qWarning("Failed to execute query for key %s", key.c_str());
 
 		sqlite3_free(queryStr);
 		return false;
@@ -151,7 +151,7 @@ bool PrefsDb::setPref(const std::string& key, const std::string& value)
 	sqlite3_free(queryStr);
 
 	qDebug("set ( [%s] , [---, length %zu] )", key.c_str(), value.size());
-	return true;    
+	return true;
 }
 
 std::string PrefsDb::getPref(const std::string& key)
@@ -161,7 +161,7 @@ std::string PrefsDb::getPref(const std::string& key)
 	int ret = 0;
 	//gchar* queryStr = 0;
 	char * queryStr = 0;
-	
+
 	std::string result="";
 
 	if (!m_prefsDb)
@@ -179,7 +179,7 @@ std::string PrefsDb::getPref(const std::string& key)
 
 	ret = sqlite3_prepare(m_prefsDb, queryStr, -1, &statement, &tail);
 	if (ret) {
-        qWarning("Failed to prepare sql statement: %s", queryStr);
+		qWarning("Failed to prepare sql statement: %s", queryStr);
 		goto Done;
 	}
 
@@ -225,7 +225,7 @@ bool PrefsDb::getPref(const std::string& key,std::string& r_val)
 
 	ret = sqlite3_prepare(m_prefsDb, queryStr, -1, &statement, &tail);
 	if (ret) {
-        qWarning("Failed to prepare sql statement: %s", queryStr);
+		qWarning("Failed to prepare sql statement: %s", queryStr);
 		goto Done;
 	}
 
@@ -264,7 +264,7 @@ std::map<std::string,std::string> PrefsDb::getAllPrefs()
 
 	ret = sqlite3_prepare(m_prefsDb, query.c_str(), -1, &statement, &tail);
 	if (ret) {
-        qWarning() << "Failed to prepare sql statement";
+		qWarning() << "Failed to prepare sql statement";
 		goto Done;
 	}
 
@@ -301,18 +301,18 @@ int PrefsDb::merge(const std::string& sourceDbFilename,bool overwriteSameKeys)
 		bool sqlOk = runSqlCommand(attachCmd.c_str());
 		if (!sqlOk)
 		{
-            qWarning() << "Failed to run ATTACH cmd to attach [" << sourceDbFilename.c_str() << "] to this db";
+			qWarning() << "Failed to run ATTACH cmd to attach [" << sourceDbFilename.c_str() << "] to this db";
 			return 0;
 		}
 		std::string mergeCmd = std::string("INSERT INTO main.Preferences SELECT * FROM backupDb.Preferences;");
 		sqlOk = runSqlCommand(mergeCmd.c_str());
 		if (!sqlOk)
 		{
-            qWarning() << "Failed to run INSERT command to merge [" << sourceDbFilename.c_str() << "] into this db";
+			qWarning() << "Failed to run INSERT command to merge [" << sourceDbFilename.c_str() << "] into this db";
 		}
 		else
 		{
-            qDebug("successfully merged [%s] into this db", sourceDbFilename.c_str());
+			qDebug("successfully merged [%s] into this db", sourceDbFilename.c_str());
 		}
 
 		closePrefsDb();
@@ -320,7 +320,7 @@ int PrefsDb::merge(const std::string& sourceDbFilename,bool overwriteSameKeys)
 	}
 	else
 	{
-        qWarning() << "Non-destructive merge not yet implemented! Nothing merged";
+		qWarning() << "Non-destructive merge not yet implemented! Nothing merged";
 		return 0;
 	}
 
@@ -338,7 +338,7 @@ int PrefsDb::copyKeys(PrefsDb * p_sourceDb,const std::list<std::string>& keys,bo
 		return 0;
 
 	qDebug("source DB file: [%s] , target DB file: [%s] , overwriteSameKeys = %s",
-            p_sourceDb->m_dbFilename.c_str(), m_dbFilename.c_str(),(overwriteSameKeys ? "YES" : "NO"));
+		p_sourceDb->m_dbFilename.c_str(), m_dbFilename.c_str(),(overwriteSameKeys ? "YES" : "NO"));
 	int n=0;
 	for (std::list<std::string>::const_iterator it = keys.begin();
 			it != keys.end();++it)
@@ -349,8 +349,8 @@ int PrefsDb::copyKeys(PrefsDb * p_sourceDb,const std::list<std::string>& keys,bo
 			std::string myVal;
 			if (!getPref(*it,myVal) || overwriteSameKeys)
 			{
-                PMLOG_TRACE("copying key,value = ( [%s] , [%s] ) , overwriting [%s] ",
-                    (*it).c_str(),val.c_str(),myVal.c_str());
+				PMLOG_TRACE("copying key,value = ( [%s] , [%s] ) , overwriting [%s] ",
+					(*it).c_str(),val.c_str(),myVal.c_str());
 				setPref(*it,val);
 				++n;
 			}
@@ -373,7 +373,7 @@ sqlite3_stmt* PrefsDb::runSqlQuery(const std::string& queryStr)
 
 	ret = sqlite3_prepare(m_prefsDb, queryStr.c_str(), -1, &statement, &tail);
 	if (ret != SQLITE_OK) {
-        qWarning("Failed to prepare sql statement");
+		qWarning("Failed to prepare sql statement");
 		if (statement)
 		{
 			sqlite3_finalize(statement);
@@ -396,7 +396,7 @@ bool PrefsDb::runSqlCommand(const std::string& cmdStr)
 
 	ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, &pErrMsg);
 	if (ret) {
-        qWarning() << "Failed to execute cmd [" << queryStr << "] - extended error: [" << (pErrMsg ? pErrMsg : "<none>") << "]";
+		qWarning() << "Failed to execute cmd [" << queryStr << "] - extended error: [" << (pErrMsg ? pErrMsg : "<none>") << "]";
 		rc = false;
 	}
 	else
@@ -437,7 +437,7 @@ std::map<std::string, std::string> PrefsDb::getPrefs(const std::list<std::string
 
 	ret = sqlite3_prepare(m_prefsDb, query.c_str(), -1, &statement, &tail);
 	if (ret) {
-        qWarning() << "Failed to prepare sql statement";
+		qWarning() << "Failed to prepare sql statement";
 		goto Done;
 	}
 
@@ -455,7 +455,7 @@ Done:
 	if (statement)
 		sqlite3_finalize(statement);
 
-	return result;    
+	return result;
 }
 
 void PrefsDb::openPrefsDb()
@@ -469,16 +469,16 @@ void PrefsDb::openPrefsDb()
 	gchar* prefsDirPath = g_path_get_dirname(m_dbFilename.c_str());
 	g_mkdir_with_parents(prefsDirPath, 0755);
 	g_free(prefsDirPath);
-	
+
 	int ret = sqlite3_open(m_dbFilename.c_str(), &m_prefsDb);
 	if (ret) {
-        qWarning() << "Failed to open preferences db [" << m_dbFilename.c_str() << "]";
+		qWarning() << "Failed to open preferences db [" << m_dbFilename.c_str() << "]";
 		return;
 	}
 
 	if (!checkTableConsistency()) {
 
-        qWarning() << "Failed to create Preferences table";
+		qWarning() << "Failed to create Preferences table";
 		sqlite3_close(m_prefsDb);
 		m_prefsDb = 0;
 		return;
@@ -489,7 +489,7 @@ void PrefsDb::openPrefsDb()
 					   "(key   TEXT NOT NULL ON CONFLICT FAIL UNIQUE ON CONFLICT REPLACE, "
 					   " value TEXT);", NULL, NULL, NULL);
 	if (ret) {
-        qWarning() << "Failed to create Preferences table";
+		qWarning() << "Failed to create Preferences table";
 		sqlite3_close(m_prefsDb);
 		m_prefsDb = 0;
 		return;
@@ -498,11 +498,11 @@ void PrefsDb::openPrefsDb()
 
 void PrefsDb::closePrefsDb()
 {
-    if (!m_prefsDb)
+	if (!m_prefsDb)
 		return;
 
 	(void) sqlite3_close(m_prefsDb);
-	m_prefsDb = 0;    
+	m_prefsDb = 0;
 }
 
 bool PrefsDb::checkTableConsistency()
@@ -513,18 +513,18 @@ bool PrefsDb::checkTableConsistency()
 	int ret;
 	std::string query;
 	sqlite3_stmt* statement = 0;
-	const char* tail = 0;	
+	const char* tail = 0;
 
 	if (!integrityCheckDb())
 	{
-        qCritical("integrity check failed on prefs db and it cannot be recreated");
+		qCritical("integrity check failed on prefs db and it cannot be recreated");
 		return false;
 	}
-	
+
 	query = "SELECT value FROM Preferences WHERE key='databaseVersion'";
 	ret = sqlite3_prepare(m_prefsDb, query.c_str(), -1, &statement, &tail);
 	if (ret) {
-        qWarning("Failed to prepare sql statement: %s (%s)",
+		qWarning("Failed to prepare sql statement: %s (%s)",
 					  query.c_str(), sqlite3_errmsg(m_prefsDb));
 		sqlite3_finalize(statement);
 		goto Recreate;
@@ -542,10 +542,10 @@ bool PrefsDb::checkTableConsistency()
 		// check to see if all the defaults from the s_defaultPrefsFile at least exist and if not, add them
 		synchronizeDefaults();
 		synchronizePlatformDefaults();
-	
+
 		//check the same with the "customer care" file
 		synchronizeCustomerCareInfo();
-	
+
 		updateWithCustomizationPrefOverrides();
 	}
 	//Everything is now ok.
@@ -559,14 +559,14 @@ Recreate:
 					   "(key   TEXT NOT NULL ON CONFLICT FAIL UNIQUE ON CONFLICT REPLACE, "
 					   " value TEXT);", NULL, NULL, NULL);
 	if (ret) {
-        qWarning() << "Failed to create Preferences table";
+		qWarning() << "Failed to create Preferences table";
 		return false;
 	}
 
 	ret = sqlite3_exec(m_prefsDb, "INSERT INTO Preferences VALUES ('databaseVersion', '1.0')",
 					   NULL, NULL, NULL);
 	if (ret) {
-        qWarning() << "Failed to create Preferences table";
+		qWarning() << "Failed to create Preferences table";
 		return false;
 	}
 
@@ -592,8 +592,8 @@ bool PrefsDb::integrityCheckDb()
 
 	ret = sqlite3_prepare(m_prefsDb, "PRAGMA integrity_check", -1, &statement, &tail);
 	if (ret) {
-        qCritical() << "Failed to prepare sql statement for integrity_check";
-	    goto CorruptDb;
+		qCritical() << "Failed to prepare sql statement for integrity_check";
+		goto CorruptDb;
 	}
 
 	ret = sqlite3_step(statement);
@@ -614,14 +614,14 @@ bool PrefsDb::integrityCheckDb()
 
 CorruptDb:
 
-    qCritical() << "integrity check failed. recreating database";
+	qCritical() << "integrity check failed. recreating database";
 
 	sqlite3_close(m_prefsDb);
 	unlink(m_dbFilename.c_str());
 
 	ret = sqlite3_open_v2 (m_dbFilename.c_str(), &m_prefsDb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
 	if (ret) {
-        qCritical() << "Failed to re-open prefs db at [" << m_dbFilename.c_str() << "]";
+		qCritical() << "Failed to re-open prefs db at [" << m_dbFilename.c_str() << "]";
 		return false;
 	}
 
@@ -629,10 +629,10 @@ CorruptDb:
 }
 
 void PrefsDb::synchronizeDefaults() {
-	
+
 	char* jsonStr = Utils::readFile(s_defaultPrefsFile);
 	if (!jsonStr) {
-        qWarning() << "Failed to load default prefs file:" << s_defaultPrefsFile;
+		qWarning() << "Failed to load default prefs file:" << s_defaultPrefsFile;
 		return;
 	}
 
@@ -644,7 +644,7 @@ void PrefsDb::synchronizeDefaults() {
 	root = json_tokener_parse(jsonStr);
 	if (!root || is_error(root)) {
 		delete [] jsonStr;
-        qWarning() << "Failed to parse file contents into json";
+		qWarning() << "Failed to parse file contents into json";
 		return;
 	}
 
@@ -657,35 +657,36 @@ void PrefsDb::synchronizeDefaults() {
 		return;
 	}
 
-	json_object_object_foreach(label, key, val) {
+	{
+		json_object_object_foreach(label, key, val) {
 
-		if (val == NULL)
-			continue;		//TODO: really should delete this key if it is in the database
-		const char * p_cDbv = json_object_to_json_string(val);
-		if (p_cDbv == NULL)
-			continue;
-		//check the key to see if it exists in the db already
-
-		std::string cv = getPref(key);
-
-		if ((cv.length() == 0) || ((strncmp(key,".sysservice",11) == 0))) {		//allow special keys to be overriden
-			queryStr = g_strdup_printf("INSERT INTO Preferences "
-					"VALUES ('%s', '%s')",
-					key, json_object_to_json_string(val));
-			if (!queryStr) {
-                qWarning() << "PrefsDb::synchronizeDefaults(): Failed to allocate query string for key:" << key;
+			if (val == NULL)
+				continue;		//TODO: really should delete this key if it is in the database
+			const char * p_cDbv = json_object_to_json_string(val);
+			if (p_cDbv == NULL)
 				continue;
-			}
+			//check the key to see if it exists in the db already
 
-			ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
-			g_free(queryStr);
+			std::string cv = getPref(key);
 
-			if (ret) {
-                qWarning() << "Failed to execute query for key:" << key;
-				continue;
+			if ((cv.length() == 0) || ((strncmp(key,".sysservice",11) == 0))) {		//allow special keys to be overriden
+				queryStr = g_strdup_printf("INSERT INTO Preferences "
+						"VALUES ('%s', '%s')",
+						key, json_object_to_json_string(val));
+				if (!queryStr) {
+					qWarning() << "PrefsDb::synchronizeDefaults(): Failed to allocate query string for key:" << key;
+					continue;
+				}
+
+				ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
+				g_free(queryStr);
+
+				if (ret) {
+					qWarning() << "Failed to execute query for key:" << key;
+					continue;
+				}
 			}
 		}
-		
 	}
 
 	json_object_put(root);
@@ -693,10 +694,10 @@ void PrefsDb::synchronizeDefaults() {
 }
 
 void PrefsDb::synchronizePlatformDefaults() {
-	
+
 	char* jsonStr = Utils::readFile(s_defaultPlatformPrefsFile);
 	if (!jsonStr) {
-        qWarning() << "Failed to load default platform prefs file:" << s_defaultPlatformPrefsFile;
+		qWarning() << "Failed to load default platform prefs file:" << s_defaultPlatformPrefsFile;
 		return;
 	}
 
@@ -707,7 +708,7 @@ void PrefsDb::synchronizePlatformDefaults() {
 
 	root = json_tokener_parse(jsonStr);
 	if (!root || is_error(root)) {
-        qWarning() << "Failed to parse file contents into json";
+		qWarning() << "Failed to parse file contents into json";
 		return;
 	}
 
@@ -718,35 +719,35 @@ void PrefsDb::synchronizePlatformDefaults() {
 		return;
 	}
 
-	json_object_object_foreach(label, key, val) {
-
-		if (val == NULL)
-			continue;		//TODO: really should delete this key if it is in the database
-		const char * p_cDbv = json_object_to_json_string(val);
-		if (p_cDbv == NULL)
-			continue;
-		//check the key to see if it exists in the db already
-
-		std::string cv = getPref(key);
-
-		if (cv.length() == 0) {
-			queryStr = g_strdup_printf("INSERT INTO Preferences "
-					"VALUES ('%s', '%s')",
-					key, json_object_to_json_string(val));
-			if (!queryStr) {
-                qWarning() << "Failed to allocate query string for key:" << key;
+	{
+		json_object_object_foreach(label, key, val) {
+			if (val == NULL)
+				continue;		//TODO: really should delete this key if it is in the database
+			const char * p_cDbv = json_object_to_json_string(val);
+			if (p_cDbv == NULL)
 				continue;
-			}
+			//check the key to see if it exists in the db already
 
-			ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
-			g_free(queryStr);
+			std::string cv = getPref(key);
 
-			if (ret) {
-                qWarning() << "Failed to execute query for key:" << key;
-				continue;
+			if (cv.length() == 0) {
+				queryStr = g_strdup_printf("INSERT INTO Preferences "
+						"VALUES ('%s', '%s')",
+						key, json_object_to_json_string(val));
+				if (!queryStr) {
+					qWarning() << "Failed to allocate query string for key:" << key;
+					continue;
+				}
+
+				ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
+				g_free(queryStr);
+
+				if (ret) {
+					qWarning() << "Failed to execute query for key:" << key;
+					continue;
+				}
 			}
 		}
-		
 	}
 
 	json_object_put(root);
@@ -754,10 +755,10 @@ void PrefsDb::synchronizePlatformDefaults() {
 }
 
 void PrefsDb::synchronizeCustomerCareInfo() {
-	
+
 	char* jsonStr = Utils::readFile(s_custCareNumberFile);
 	if (!jsonStr) {
-        qWarning() << "Failed to load customer care file:" << s_custCareNumberFile;
+		qWarning() << "Failed to load customer care file:" << s_custCareNumberFile;
 		return;
 	}
 
@@ -770,39 +771,40 @@ void PrefsDb::synchronizeCustomerCareInfo() {
 		qWarning() << "Failed to parse file contents into valid json";
 		return;
 	}
-	
-	json_object_object_foreach(root, key, val) {
 
-		if (val == NULL)
-			continue;		//TODO: really should delete this key if it is in the database
-		const char * p_cDbv = json_object_to_json_string(val);
-		if (p_cDbv == NULL)
-			continue;
-		
-		//check the key to see if it exists in the db already
-		std::string cv = getPref(key);
-		std::string dbv(p_cDbv);
-		
-		if (cv.length() == 0) {
-			queryStr = g_strdup_printf("INSERT INTO Preferences "
-					"VALUES ('%s', '%s')",
-					key, json_object_to_json_string(val));
-			if (!queryStr) {
-                qWarning() << "Failed to allocate query string for key:" << key;
+	{
+		json_object_object_foreach(root, key, val) {
+			if (val == NULL)
+				continue;		//TODO: really should delete this key if it is in the database
+			const char * p_cDbv = json_object_to_json_string(val);
+			if (p_cDbv == NULL)
 				continue;
-			}
 
-			ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
-			g_free(queryStr);
+			//check the key to see if it exists in the db already
+			std::string cv = getPref(key);
+			std::string dbv(p_cDbv);
 
-			if (ret) {
-                qWarning() << "Failed to execute query for key:" << key;
-				continue;
+			if (cv.length() == 0) {
+				queryStr = g_strdup_printf("INSERT INTO Preferences "
+						"VALUES ('%s', '%s')",
+						key, json_object_to_json_string(val));
+				if (!queryStr) {
+					qWarning() << "Failed to allocate query string for key:" << key;
+					continue;
+				}
+
+				ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
+				g_free(queryStr);
+
+				if (ret) {
+					qWarning() << "Failed to execute query for key:" << key;
+					continue;
+				}
 			}
-		}
-		else if (cv != dbv) {
-			//update
-			setPref(key,dbv);
+			else if (cv != dbv) {
+				//update
+				setPref(key,dbv);
+			}
 		}
 	}
 
@@ -814,7 +816,7 @@ void PrefsDb::updateWithCustomizationPrefOverrides()
 {
 	char* jsonStr = Utils::readFile(s_customizationOverridePrefsFile);
 	if (!jsonStr) {
-        qWarning() << "Failed to customization's prefs override file:" << s_customizationOverridePrefsFile;
+		qWarning() << "Failed to customization's prefs override file:" << s_customizationOverridePrefsFile;
 		return;
 	}
 
@@ -826,7 +828,7 @@ void PrefsDb::updateWithCustomizationPrefOverrides()
 	root = json_tokener_parse(jsonStr);
 	if (!root || is_error(root)) {
 		delete [] jsonStr;
-        qWarning() << "Failed to parse file contents into json";
+		qWarning() << "Failed to parse file contents into json";
 		return;
 	}
 
@@ -839,25 +841,27 @@ void PrefsDb::updateWithCustomizationPrefOverrides()
 		return;
 	}
 
-	json_object_object_foreach(label, key, val) {
+	{
+		json_object_object_foreach(label, key, val) {
 
-		if (val == NULL)
-			continue;		//TODO: really should delete this key if it is in the database
+			if (val == NULL)
+				continue;		//TODO: really should delete this key if it is in the database
 
-		queryStr = g_strdup_printf("INSERT INTO Preferences "
-				"VALUES ('%s', '%s')",
-				key, json_object_to_json_string(val));
-		if (!queryStr) {
-            qWarning() << "Failed to allocate query string for key:" << key;
-			continue;
-		}
+			queryStr = g_strdup_printf("INSERT INTO Preferences "
+					"VALUES ('%s', '%s')",
+					key, json_object_to_json_string(val));
+			if (!queryStr) {
+				qWarning() << "Failed to allocate query string for key:" << key;
+				continue;
+			}
 
-		ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
-		g_free(queryStr);
+			ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
+			g_free(queryStr);
 
-		if (ret) {
-            qWarning() << "Failed to execute query for key:" << key;
-			continue;
+			if (ret) {
+				qWarning() << "Failed to execute query for key:" << key;
+				continue;
+			}
 		}
 	}
 
@@ -872,7 +876,7 @@ void PrefsDb::loadDefaultPrefs()
 {
 	char* jsonStr = Utils::readFile(s_defaultPrefsFile);
 	if (!jsonStr) {
-        qWarning() << "Failed to load default prefs file:" << s_defaultPrefsFile;
+		qWarning() << "Failed to load default prefs file:" << s_defaultPrefsFile;
 		return;
 	}
 
@@ -886,7 +890,7 @@ void PrefsDb::loadDefaultPrefs()
 
 	root = json_tokener_parse(jsonStr);
 	if (!root || is_error(root)) {
-        qWarning() << "Failed to parse preferences file contents into json";
+		qWarning() << "Failed to parse preferences file contents into json";
 		goto Stage1a;
 	}
 
@@ -896,29 +900,31 @@ void PrefsDb::loadDefaultPrefs()
 		goto Stage1a;
 	}
 
-	json_object_object_foreach(label, key, val) {
+	{
+		json_object_object_foreach(label, key, val) {
 
-		queryStr = g_strdup_printf("INSERT INTO Preferences "
-										  "VALUES ('%s', '%s')",
-										  key, json_object_to_json_string(val));
-		if (!queryStr) {
-            qWarning() << "Failed to allocate query string for key:" << key;
-			continue;
-		}
+			queryStr = g_strdup_printf("INSERT INTO Preferences "
+											  "VALUES ('%s', '%s')",
+											  key, json_object_to_json_string(val));
+			if (!queryStr) {
+				qWarning() << "Failed to allocate query string for key:" << key;
+				continue;
+			}
 
-		ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
-		g_free(queryStr);
-		queryStr = 0;
-		
-		if (ret) {
-            qWarning() << "Failed to execute query for key:" << key;
-			continue;
+			ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
+			g_free(queryStr);
+			queryStr = 0;
+
+			if (ret) {
+				qWarning() << "Failed to execute query for key:" << key;
+				continue;
+			}
 		}
 	}
 
 Stage1a:
 	// ----------------- Load in the db tokens that let the system service know what restore stage the system is in (after reformats, etc)
-	
+
 	if (jsonStr) {
 		delete [] jsonStr;
 	}
@@ -933,7 +939,7 @@ Stage1a:
 			"VALUES ('%s', '%s')",
 			s_DBNEWTOKEN[0],s_DBNEWTOKEN[1]);
 	if (!queryStr) {
-        qWarning() << "Failed to allocate query string";
+		qWarning() << "Failed to allocate query string";
 		goto Stage2;
 	}
 
@@ -941,7 +947,7 @@ Stage1a:
 	g_free(queryStr);
 
 	if (ret) {
-        qWarning() << "Failed to execute query:" << queryStr;
+		qWarning() << "Failed to execute query:" << queryStr;
 	}
 
 Stage2:
@@ -949,7 +955,7 @@ Stage2:
 	//customer care number also...this is in a separate file
 	jsonStr = Utils::readFile(s_custCareNumberFile);
 	if (!jsonStr) {
-        qWarning() << "Failed to load customer care # file:" << s_custCareNumberFile;
+		qWarning() << "Failed to load customer care # file:" << s_custCareNumberFile;
 		goto Stage3;
 	}
 
@@ -959,31 +965,33 @@ Stage2:
 		goto Stage3;
 	}
 
-	json_object_object_foreach(root, cc_key, cc_val) {
+	{
+		json_object_object_foreach(root, cc_key, cc_val) {
 
-		if (cc_val == NULL)
-			continue;		
-		p_cDbv = json_object_to_json_string(cc_val);
-		if (p_cDbv == NULL)
-			continue;
+			if (cc_val == NULL)
+				continue;
+			p_cDbv = json_object_to_json_string(cc_val);
+			if (p_cDbv == NULL)
+				continue;
 
-		queryStr = g_strdup_printf("INSERT INTO Preferences "
-				"VALUES ('%s', '%s')",
-				cc_key, json_object_to_json_string(cc_val));
-		if (!queryStr) {
-            qWarning() << "Failed to allocate query string for key:" << cc_key;
-			continue;
+			queryStr = g_strdup_printf("INSERT INTO Preferences "
+					"VALUES ('%s', '%s')",
+					cc_key, json_object_to_json_string(cc_val));
+			if (!queryStr) {
+				qWarning() << "Failed to allocate query string for key:" << cc_key;
+				continue;
+			}
+
+			ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
+			g_free(queryStr);
+			queryStr = 0;
+
+			if (ret) {
+				qWarning() << "Failed to execute query:" << queryStr;
+				continue;
+			}
+			qDebug("loaded key %s with value %s",cc_key, json_object_to_json_string(cc_val));
 		}
-
-		ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
-		g_free(queryStr);
-		queryStr = 0;
-
-		if (ret) {
-            qWarning() << "Failed to execute query:" << queryStr;
-			continue;
-		}
-        qDebug("loaded key %s with value %s",cc_key, json_object_to_json_string(cc_val));
 	}
 
 Stage3:
@@ -1002,26 +1010,26 @@ Stage3:
 			"VALUES ('%s', '%s')",
 			s_DEFAULT_uaProf[0],s_DEFAULT_uaProf[1]);
 	if (!queryStr) {
-        qWarning() << "[Stage 3] Failed to allocate query string";
+		qWarning() << "[Stage 3] Failed to allocate query string";
 		goto Done;
 	}
 
 	ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
 	if (ret) {
-        qWarning() << "[Stage 3] Failed to execute query:" << queryStr;
+		qWarning() << "[Stage 3] Failed to execute query:" << queryStr;
 	}
 	g_free(queryStr);
 	queryStr = g_strdup_printf("INSERT INTO Preferences "
 			"VALUES ('%s', '%s')",
 			s_DEFAULT_uaString[0],s_DEFAULT_uaString[1]);
 	if (!queryStr) {
-        qWarning() << "[Stage 3] Failed to allocate query string";
+		qWarning() << "[Stage 3] Failed to allocate query string";
 		goto Done;
 	}
 
 	ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
 	if (ret) {
-        qWarning() << "Stage 3] Failed to execute query:" << queryStr;
+		qWarning() << "Stage 3] Failed to execute query:" << queryStr;
 	}
 	g_free(queryStr);
 	queryStr = 0;
@@ -1041,7 +1049,7 @@ void PrefsDb::loadDefaultPlatformPrefs()
 {
 	char* jsonStr = Utils::readFile(s_defaultPlatformPrefsFile);
 	if (!jsonStr) {
-        qWarning() << "Failed to load platform default prefs file:" << s_defaultPlatformPrefsFile;
+		qWarning() << "Failed to load platform default prefs file:" << s_defaultPlatformPrefsFile;
 		return;
 	}
 
@@ -1054,7 +1062,7 @@ void PrefsDb::loadDefaultPlatformPrefs()
 
 	root = json_tokener_parse(jsonStr);
 	if (!root || is_error(root)) {
-        qWarning() << "Failed to parse preferences file contents into json";
+		qWarning() << "Failed to parse preferences file contents into json";
 		goto Done;
 	}
 
@@ -1064,22 +1072,24 @@ void PrefsDb::loadDefaultPlatformPrefs()
 		goto Done;
 	}
 
-	json_object_object_foreach(label, key, val) {
+	{
+		json_object_object_foreach(label, key, val) {
 
-		queryStr = g_strdup_printf("INSERT INTO Preferences "
-				"VALUES ('%s', '%s')",
-				key, json_object_to_json_string(val));
-		if (!queryStr) {
-            qWarning() << "Failed to allocate query string for key:" << key;
-			continue;
-		}
+			queryStr = g_strdup_printf("INSERT INTO Preferences "
+					"VALUES ('%s', '%s')",
+					key, json_object_to_json_string(val));
+			if (!queryStr) {
+				qWarning() << "Failed to allocate query string for key:" << key;
+				continue;
+			}
 
-		ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
-		g_free(queryStr);
+			ret = sqlite3_exec(m_prefsDb, queryStr, NULL, NULL, NULL);
+			g_free(queryStr);
 
-		if (ret) {
-            qWarning() << "Failed to execute query for key:" << key;
-			continue;
+			if (ret) {
+				qWarning() << "Failed to execute query for key:" << key;
+				continue;
+			}
 		}
 	}
 
@@ -1098,7 +1108,7 @@ Done:
 	SystemRestore::instance()->refreshDefaultSettings();
 }
 
-void PrefsDb::backupDefaultPrefs() 
+void PrefsDb::backupDefaultPrefs()
 {
 	std::string prefStr = getPref("wallpaper");
 	setPref(PrefsDb::s_sysDefaultWallpaperKey,prefStr);

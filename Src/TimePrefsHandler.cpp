@@ -41,8 +41,8 @@
 #include "Utils.h"
 #include "JSONUtils.h"
 
-#include <cjson/json.h>
-#include <cjson/json_util.h>
+#include <json.h>
+#include <json_util.h>
 
 static const char*	  s_tzFile	=	WEBOS_INSTALL_WEBOS_PREFIX "/ext-timezones.json";
 static const char*    s_tzFilePath = WEBOS_INSTALL_SYSMGR_LOCALSTATEDIR "/preferences/localtime";

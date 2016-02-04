@@ -21,7 +21,7 @@
 //for basename()...
 #include <string.h>
 #include <map>
-#include <cjson/json.h>
+#include <json.h>
 
 #include "EraseHandler.h"
 #include "Logging.h"

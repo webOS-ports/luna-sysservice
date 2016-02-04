@@ -17,7 +17,7 @@
 #define __STDC_FORMAT_MACROS
 
 #include <glib.h>
-#include <cjson/json.h>
+#include <json.h>
 #include <time.h>
 #include <stdio.h>
 #include <string.h>

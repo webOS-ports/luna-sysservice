@@ -16,7 +16,7 @@
 
 
 #include <assert.h>
-#include <cjson/json.h>
+#include <json.h>
 #include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>

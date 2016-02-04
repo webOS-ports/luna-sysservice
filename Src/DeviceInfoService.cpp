@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-#include <cjson/json.h>
+#include <json.h>
 
 #include "DeviceInfoService.h"
 #include "Logging.h"

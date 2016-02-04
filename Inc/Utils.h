@@ -27,8 +27,8 @@
 #include <list>
 #include <string>
 #include <vector>
-#include <cjson/json.h>
-#include <cjson/json_util.h>
+#include <json.h>
+#include <json_util.h>
 #include <luna-service2/lunaservice.h>
 
 #define SS_DEBUG_INFO	100
