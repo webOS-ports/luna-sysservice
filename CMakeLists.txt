@@ -151,7 +151,7 @@ target_link_libraries(LunaSysService
                       ${NYXLIB_LDFLAGS}
                       rt
                       )
-
+set_property(TARGET LunaSysService PROPERTY CXX_STANDARD 11)
 
 webos_build_system_bus_files()
 webos_build_daemon()
