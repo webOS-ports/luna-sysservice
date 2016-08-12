@@ -71,7 +71,7 @@ void DeviceInfoService::initCommandMap()
 	s_commandMap["storage_size"] = NYX_DEVICE_INFO_STORAGE_SIZE; // Return storage size
 	s_commandMap["wifi_addr"] = NYX_DEVICE_INFO_WIFI_ADDR; // Return WiFi MAC address
 	s_commandMap["last_reset_type"] = NYX_DEVICE_INFO_LAST_RESET_TYPE; // Reason code for last reboot (may come from /proc/cmdline)
-	s_commandMap["battery_challange"] = NYX_DEVICE_INFO_BATT_CH; // Battery challenge
+	s_commandMap["battery_challenge"] = NYX_DEVICE_INFO_BATT_CH; // Battery challenge
 	s_commandMap["battery_response"] = NYX_DEVICE_INFO_BATT_RSP; // Battery response
 }
 
@@ -137,7 +137,7 @@ com.palm.systemservice/deviceInfo/query
     "storage_size": string
     "wifi_addr": string
     "last_reset_type": string
-    "battery_challange": string
+    "battery_challenge": string
     "battery_response": string
 }
 \endcode
@@ -161,7 +161,7 @@ com.palm.systemservice/deviceInfo/query
 \param storage_size Storage size
 \param wifi_addr WiFi MAC address
 \param last_reset_type Reason code for last reboot (may come from /proc/cmdline)
-\param battery_challange Battery challenge
+\param battery_challenge Battery challenge
 \param battery_response Battery response
 
 All listed parameters can have `not supported` value, if not supported by the device.
