@@ -186,7 +186,7 @@ static bool cbComPalmImage2Status(LSHandle* lsHandle, LSMessage *message,
 		return false;
 
 	root = json_tokener_parse(str);
-	if ((root == NULL) || (is_error(root))) {
+	if (!root) {
 		root = NULL;
 		return true;
 	}

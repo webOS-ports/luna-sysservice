@@ -567,12 +567,12 @@ bool TimePrefsHandler::isValidTimeZoneName(const std::string& tzName)
 		return false;
 
 	json_object * label = json_object_object_get(TimePrefsHandler::s_timeZonesJson, "timeZone");
-	if (!label || is_error(label)) {
+	if (!label) {
 		return false;
 	}
 
 	array_list * srcJsonArray = json_object_get_array(label);
-	if ((!srcJsonArray) || (is_error(srcJsonArray))) {
+	if (!srcJsonArray) {
 		return false;
 	}
 	for (int i = 0; i < array_list_length(srcJsonArray); i++) {
@@ -592,12 +592,12 @@ bool TimePrefsHandler::isValidTimeZoneName(const std::string& tzName)
 	}
 
 	label = json_object_object_get(TimePrefsHandler::s_timeZonesJson, "syszones");
-	if (!label || is_error(label)) {
+	if (!label) {
 		return false;
 	}
 
 	srcJsonArray = json_object_get_array(label);
-	if ((!srcJsonArray) || (is_error(srcJsonArray))) {
+	if (!srcJsonArray) {
 		return false;
 	}
 	for (int i = 0; i < array_list_length(srcJsonArray); i++) {
@@ -708,7 +708,7 @@ std::string TimePrefsHandler::getDefaultTZFromJson(TimeZoneInfo * r_pZoneInfo)
 	}
 
 	json_object * label = json_object_object_get(s_timeZonesJson, "timeZone");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "error on json object: it doesn't contain a timezones array";
 		if (r_pZoneInfo)
 			*r_pZoneInfo = s_failsafeDefaultZone;
@@ -716,7 +716,7 @@ std::string TimePrefsHandler::getDefaultTZFromJson(TimeZoneInfo * r_pZoneInfo)
 	}
 
 	array_list * srcJsonArray = json_object_get_array(label);
-	if ((!srcJsonArray) || (is_error(srcJsonArray))) {
+	if (!srcJsonArray) {
         qWarning("error on json object: it doesn't contain a timezones array");
 		if (r_pZoneInfo)
 			*r_pZoneInfo = s_failsafeDefaultZone;
@@ -849,16 +849,16 @@ void TimePrefsHandler::init()
 
 	if (!s_timeZonesJson) {		//or else I'll leak
 		s_timeZonesJson = json_object_from_file(const_cast<char*>(s_tzFile));
-		if ((!s_timeZonesJson) || is_error(s_timeZonesJson))
+		if (!s_timeZonesJson)
 			s_timeZonesJson = NULL;
 		else {
 			json_object* ja = json_object_object_get(s_timeZonesJson,(char *)"timeZone");
-			if ((ja) && (!is_error(ja))) {
+			if (ja) {
 				int s = json_object_array_length(ja);
 				qDebug("%d timezones loaded from [%s]",s,s_tzFile);
 			}
 			json_object* jsa = json_object_object_get(s_timeZonesJson,(char *)"syszones");
-			if ((jsa) && (!is_error(jsa))) {
+			if (jsa) {
 				int s = json_object_array_length(jsa);
 				qDebug("%d sys timezones loaded from [%s]",s,s_tzFile);
 			}
@@ -949,7 +949,7 @@ void TimePrefsHandler::readCurrentNITZSettings()
 	bool val;
 	qDebug("string1 is [%s]",settingJsonStr.c_str());
 	json_object* json = json_tokener_parse(settingJsonStr.c_str());
-	if (json && (!is_error(json))) {
+	if (json) {
 		val = json_object_get_boolean(json);
 		json_object_put(json);
 	}
@@ -964,7 +964,7 @@ void TimePrefsHandler::readCurrentNITZSettings()
 	settingJsonStr = PrefsDb::instance()->getPref("useNetworkTimeZone");
 	qDebug("string2 is [%s]",settingJsonStr.c_str());
 	json = json_tokener_parse(settingJsonStr.c_str());
-	if (json && (!is_error(json))) {
+	if (json) {
 		val = json_object_get_boolean(json);
 		
 		json_object_put(json);
@@ -1035,13 +1035,13 @@ std::string TimePrefsHandler::tzNameFromJsonValue(json_object * pValue)
 std::string TimePrefsHandler::tzNameFromJsonString(const std::string& TZJson)
 {
 	json_object * root = json_tokener_parse(TZJson.c_str());
-	if (!root || is_error(root))
+	if (!root)
 		return std::string("");
 
 	std::string zoneId;
 
 	json_object* obj = json_object_object_get(root,(char *)"ZoneID");
-	if ((obj) && (!is_error(obj))) {
+	if (obj) {
 		zoneId = json_object_get_string(obj);
 	}
 	json_object_put(root);
@@ -1060,13 +1060,13 @@ std::string TimePrefsHandler::getQualifiedTZIdFromName(const std::string& tzName
 		return std::string("");
 
 	json_object * label = json_object_object_get(s_timeZonesJson, "timeZone");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "error on json object: it doesn't contain a timezones array";
 		return std::string("");
 	}
 
 	array_list * srcJsonArray = json_object_get_array(label);
-	if ((!srcJsonArray) || (is_error(srcJsonArray))) {
+	if (!srcJsonArray) {
         qWarning() << "error on json object: it doesn't contain a timezones array";
 		return std::string("");
 	}
@@ -1074,7 +1074,7 @@ std::string TimePrefsHandler::getQualifiedTZIdFromName(const std::string& tzName
 		json_object* obj = static_cast<json_object*>(array_list_get_idx(srcJsonArray, i));
 
 		label = json_object_object_get(obj,(char*)"ZoneID");
-		if ((!label) || (is_error(label)))
+		if (!label)
 			continue;
 
 		std::string zoneId = json_object_get_string(label);
@@ -1086,13 +1086,13 @@ std::string TimePrefsHandler::getQualifiedTZIdFromName(const std::string& tzName
 	//try the sys zones
 
 	label = json_object_object_get(s_timeZonesJson, "syszones");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "error on json object: it doesn't contain a syszones array";
 		return std::string("");
 	}
 
 	srcJsonArray = json_object_get_array(label);
-	if ((!srcJsonArray) || (is_error(srcJsonArray))) {
+	if (!srcJsonArray) {
         qWarning() << "error on json object: it doesn't contain a syszones array";
 		return std::string("");
 	}	
@@ -1100,7 +1100,7 @@ std::string TimePrefsHandler::getQualifiedTZIdFromName(const std::string& tzName
 		json_object* obj = static_cast<json_object*>(array_list_get_idx(srcJsonArray, i));
 
 		label = json_object_object_get(obj,(char*)"ZoneID");
-		if ((!label) || (is_error(label)))
+		if (!label)
 			continue;
 
 		std::string zoneId = json_object_get_string(label);
@@ -1120,11 +1120,11 @@ std::string TimePrefsHandler::getQualifiedTZIdFromJson(const std::string& jsonTz
 	json_object * label;
 
 	json_object * jsontzRoot = json_tokener_parse(jsonTz.c_str());
-	if (!jsontzRoot || is_error(jsontzRoot)) {
+	if (!jsontzRoot) {
 		return std::string("");
 	}
 	label = json_object_object_get(jsontzRoot,"ZoneID");
-	if ((!label) || is_error(label)) {
+	if (!label) {
         qWarning() << "error on json object: it doesn't contain a ZoneID key";
 		json_object_put(jsontzRoot);
 		return std::string("");
@@ -1135,13 +1135,13 @@ std::string TimePrefsHandler::getQualifiedTZIdFromJson(const std::string& jsonTz
 	json_object_put(jsontzRoot);
 
 	label = json_object_object_get(s_timeZonesJson, "timeZone");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "error on json object: it doesn't contain a timezones array";
 		return std::string("");
 	}
 
 	array_list * srcJsonArray = json_object_get_array(label);
-	if ((!srcJsonArray) || (is_error(srcJsonArray))) {
+	if (!srcJsonArray) {
         qWarning() << "error on json object: it doesn't contain a timezones array";
 		return std::string("");
 	}
@@ -1149,7 +1149,7 @@ std::string TimePrefsHandler::getQualifiedTZIdFromJson(const std::string& jsonTz
 		json_object* obj = static_cast<json_object*>(array_list_get_idx(srcJsonArray, i));
 
 		label = json_object_object_get(obj,(char*)"ZoneID");
-		if ((!label) || (is_error(label)))
+		if (!label)
 			continue;
 
 		std::string zoneId = json_object_get_string(label);
@@ -1161,13 +1161,13 @@ std::string TimePrefsHandler::getQualifiedTZIdFromJson(const std::string& jsonTz
 	//try the sys zones
 
 	label = json_object_object_get(s_timeZonesJson, "syszones");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "error on json object: it doesn't contain a syszones array";
 		return std::string("");
 	}
 
 	srcJsonArray = json_object_get_array(label);
-	if ((!srcJsonArray) || (is_error(srcJsonArray))) {
+	if (!srcJsonArray) {
         qWarning() << "error on json object: it doesn't contain a syszones array";
 		return std::string("");
 	}	
@@ -1175,7 +1175,7 @@ std::string TimePrefsHandler::getQualifiedTZIdFromJson(const std::string& jsonTz
 		json_object* obj = static_cast<json_object*>(array_list_get_idx(srcJsonArray, i));
 
 		label = json_object_object_get(obj,(char*)"ZoneID");
-		if ((!label) || (is_error(label)))
+		if (!label)
 			continue;
 
 		std::string zoneId = json_object_get_string(label);
@@ -1205,7 +1205,7 @@ void TimePrefsHandler::scanTimeZoneJson()
 	}
 
 	json_object * label = json_object_object_get(TimePrefsHandler::s_timeZonesJson, "timeZone");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "invalid json; missing timeZone array";
 		return;
 	}
@@ -1215,7 +1215,7 @@ void TimePrefsHandler::scanTimeZoneJson()
 	}
 
 	array_list * srcJsonArray = json_object_get_array(label);
-	if ((!srcJsonArray) || (is_error(srcJsonArray))) {
+	if (!srcJsonArray) {
         qWarning() << "invalid json; timeZone array invalid";
 		return;
 	}
@@ -1223,39 +1223,39 @@ void TimePrefsHandler::scanTimeZoneJson()
 	for (int i = 0; i < array_list_length(srcJsonArray); i++) {
 		json_object* obj = static_cast<json_object*>(array_list_get_idx(srcJsonArray, i));
 
-		if ((!obj) || (is_error(obj)))
+		if (!obj)
 			continue;
 
 		label = json_object_object_get(obj,(char*)"ZoneID");
-		if ((!label) || (is_error(label))) {
+		if (!label) {
 			continue;
 		}
 
 		name = json_object_get_string(label);
 
 		label = json_object_object_get(obj,(char*)"offsetFromUTC");
-		if ((!label) || (is_error(label))) {
+		if (!label) {
 			continue;
 		}
 
 		offset = json_object_get_int(label);
 
 		label = json_object_object_get(obj,(char*)"supportsDST");
-		if ((!label) || (is_error(label))) {
+		if (!label) {
 			continue;
 		}
 
 		supportsDst = json_object_get_int(label);
 
 		label = json_object_object_get(obj,(char*)"preferred");
-		if ((!label) || (is_error(label))) {
+		if (!label) {
 			pref=false;
 		}
 		else
 			pref = json_object_get_boolean(label);
 
 		label = json_object_object_get(obj, (char*)"CountryCode");
-		if (label && !is_error(label))
+		if (label)
 			countryCode = json_object_get_string(label);
 		else
 			countryCode = "";
@@ -1354,7 +1354,7 @@ void TimePrefsHandler::scanTimeZoneJson()
 	//now grab the "syszones"...these are the default, generic, timezones that get set in case NITZ supplies "dstinvalid"
 
 	label = json_object_object_get(s_timeZonesJson, "syszones");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "invalid json; missing syszones array";
 		return;
 	}
@@ -1364,7 +1364,7 @@ void TimePrefsHandler::scanTimeZoneJson()
 	}
 
 	srcJsonArray = json_object_get_array(label);
-	if ((!srcJsonArray) || (is_error(srcJsonArray))) {
+	if (!srcJsonArray) {
         qWarning() << "invalid json; syszones array invalid";
 		return;
 	}
@@ -1372,18 +1372,18 @@ void TimePrefsHandler::scanTimeZoneJson()
 	for (int i = 0; i < array_list_length(srcJsonArray); i++) {
 		json_object* obj = static_cast<json_object*>(array_list_get_idx(srcJsonArray, i));
 
-		if ((!obj) || (is_error(obj)))
+		if (!obj)
 			continue;
 
 		label = json_object_object_get(obj,(char*)"ZoneID");
-		if ((!label) || (is_error(label))) {
+		if (!label) {
 			continue;
 		}
 
 		name = json_object_get_string(label);
 
 		label = json_object_object_get(obj,(char*)"offsetFromUTC");
-		if ((!label) || (is_error(label))) {
+		if (!label) {
 			continue;
 		}
 
@@ -1404,7 +1404,7 @@ void TimePrefsHandler::scanTimeZoneJson()
 	// This is used to correct problems in many networks' NITZ data
 
 	label = json_object_object_get(s_timeZonesJson, "mccInfo");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "invalid json; missing mccInfo array";
 		return;
 	}
@@ -1414,7 +1414,7 @@ void TimePrefsHandler::scanTimeZoneJson()
 	}
 	
 	srcJsonArray = json_object_get_array(label);
-	if ((!srcJsonArray) || (is_error(srcJsonArray))) {
+	if (!srcJsonArray) {
         qWarning() << "invalid json; mccInfo array invalid";
 		return;
 	}
@@ -1422,38 +1422,38 @@ void TimePrefsHandler::scanTimeZoneJson()
 	for (int i = 0; i < array_list_length(srcJsonArray); i++) {
 		json_object* obj = static_cast<json_object*>(array_list_get_idx(srcJsonArray, i));
 
-		if ((!obj) || (is_error(obj)))
+		if (!obj)
 			continue;
 
 		label = json_object_object_get(obj,(char*)"ZoneID");
-		if ((label) && (!is_error(label))) {
+		if (label) {
 			name = json_object_get_string(label);
 		}
 		else
 			name = "";
 
 		label = json_object_object_get(obj, (char*)"CountryCode");
-		if (label && !is_error(label))
+		if (label)
 			countryCode = json_object_get_string(label);
 		else
 			countryCode = "";
 			
 		label = json_object_object_get(obj,(char*)"offsetFromUTC");
-		if ((!label) || (is_error(label))) {
+		if (!label) {
 			continue;
 		}
 
 		offset = json_object_get_int(label);
 		
 		label = json_object_object_get(obj,(char*)"supportsDST");
-		if ((!label) || (is_error(label))) {
+		if (!label) {
 			continue;
 		}
 
 		supportsDst = json_object_get_int(label);
 				
 		label = json_object_object_get(obj,(char*)"mcc");
-		if ((!label) || (is_error(label))) {
+		if (!label) {
 			continue;
 		}
 
@@ -1591,25 +1591,25 @@ void TimePrefsHandler::updateSystemTime()
 bool TimePrefsHandler::jsonUtil_ZoneFromJson(json_object * json,TimeZoneInfo& r_zoneInfo)
 {
 	
-	if ((!json) || (is_error(json)))
+	if (!json)
 		return false;
 
 	json_object * label = json_object_object_get(json,(char*)"ZoneID");
-	if ((!label) || (is_error(label))) {
+	if (!label) {
 		return false;
 	}
 
 	const char * name = json_object_get_string(label);
 
 	label = json_object_object_get(json,(char*)"offsetFromUTC");
-	if ((!label) || (is_error(label))) {
+	if (!label) {
 		return false;
 	}
 
 	int offset = json_object_get_int(label);
 
 	label = json_object_object_get(json,(char*)"supportsDST");
-	if ((!label) || (is_error(label))) {
+	if (!label) {
 		return false;
 	}
 
@@ -1617,7 +1617,7 @@ bool TimePrefsHandler::jsonUtil_ZoneFromJson(json_object * json,TimeZoneInfo& r_
 
 	bool pref;
 	label = json_object_object_get(json,(char*)"preferred");
-	if ((!label) || (is_error(label))) {
+	if (!label) {
 		pref=false;
 	}
 	else
@@ -1625,7 +1625,7 @@ bool TimePrefsHandler::jsonUtil_ZoneFromJson(json_object * json,TimeZoneInfo& r_
 
 	std::string countryCode;
 	label = json_object_object_get(json, (char*)"countryCode");
-	if (label && !is_error(label))
+	if (label)
 		countryCode = json_object_get_string(label);
 	
 	r_zoneInfo.offsetToUTC = offset;
@@ -1756,7 +1756,7 @@ void TimePrefsHandler::launchAppsOnTimeChange()
 	//grab the pref and parse out the json
 	std::string rawCurrentPref = PrefsDb::instance()->getPref("timeChangeLaunch");
 	struct json_object * storedJson = json_tokener_parse(rawCurrentPref.c_str());
-	if ((storedJson == NULL) || (is_error(storedJson))) {
+	if (!storedJson) {
 		//nothing to do
 		return;
 	}
@@ -2381,7 +2381,7 @@ bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *me
 		return false;
 
 	json_object* root = json_tokener_parse(str);
-	if (!root || is_error(root)) {
+	if (!root) {
 		root = 0;
 		errorText = std::string("unable to parse json");
 		goto Done_cbSetSystemNetworkTime;
@@ -2395,56 +2395,56 @@ bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *me
 	qDebug("NITZ message received from Telephony Service: %s",str);
 
 	label = json_object_object_get(root, "sec");
-	if (!label || (is_error(label)))
+	if (!label)
 		++rc;
 	else
 		timeStruct.tm_sec = strtol(json_object_get_string(label),0,10);
 	label = json_object_object_get(root, "min");
-	if (!label || (is_error(label)))
+	if (!label)
 		++rc;
 	else
 		timeStruct.tm_min = strtol(json_object_get_string(label),0,10);
 	label = json_object_object_get(root, "hour");
-	if (!label || (is_error(label)))
+	if (!label)
 		++rc;
 	else
 		timeStruct.tm_hour = strtol(json_object_get_string(label),0,10);
 	label = json_object_object_get(root, "mday");
-	if (!label || (is_error(label)))
+	if (!label)
 		++rc;
 	else
 		timeStruct.tm_mday = strtol(json_object_get_string(label),0,10);
 	label = json_object_object_get(root, "mon");
-	if (!label || (is_error(label)))
+	if (!label)
 		++rc;
 	else
 		timeStruct.tm_mon = strtol(json_object_get_string(label),0,10);
 	label = json_object_object_get(root, "year");
-	if (!label || (is_error(label)))
+	if (!label)
 		++rc;
 	else
 		timeStruct.tm_year = strtol(json_object_get_string(label),0,10);
 
 	label = json_object_object_get(root, "offset");
-	if ((label) && (!is_error(label)))
+	if (label)
 		utcOffset = strtol(json_object_get_string(label),0,10);
 	else
 		utcOffset = -1000;					// this is an invalid value so it can be detected later on
 
 	label = json_object_object_get(root, "mcc");
-	if ((label) && (!is_error(label)))
+	if (label)
 		mcc = strtol(json_object_get_string(label),0,10);
 	else
 		mcc = 0;
 
 	label = json_object_object_get(root, "mnc");
-	if ((label) && (!is_error(label)))
+	if (label)
 		mnc = strtol(json_object_get_string(label),0,10);
 	else
 		mnc = 0;
 
 	label = json_object_object_get(root, "tzvalid");
-	if ((label) && (!is_error(label)))
+	if (label)
 		tzValid = json_object_get_boolean(label);
 	else 
 		tzValid = false;
@@ -2452,7 +2452,7 @@ bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *me
 	dbg_time_tzvalidOverride(tzValid);
 	
 	label = json_object_object_get(root, "timevalid");
-	if ((label) && (!is_error(label)))
+	if (label)
 		timeValid = json_object_get_boolean(label);
 	else
 		timeValid = false;
@@ -2460,7 +2460,7 @@ bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *me
 	dbg_time_timevalidOverride(timeValid);
 
 	label = json_object_object_get(root, "dstvalid");
-	if ((label) && (!is_error(label)))
+	if (label)
 		dstValid = json_object_get_boolean(label);
 	else
 		dstValid = false;
@@ -2468,7 +2468,7 @@ bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *me
 	dbg_time_dstvalidOverride(dstValid);
 
 	label = json_object_object_get(root, "dst");
-	if ((label) && (!is_error(label)))
+	if (label)
 		dst = json_object_get_int(label);
 	else
 		dst = 0;
@@ -2479,13 +2479,13 @@ bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *me
 
 	//check to see if there is a valid timestamp
 	label = json_object_object_get(root, "timestamp");
-	if ((label) && (!is_error(label)))
+	if (label)
 		remotetimeStamp = strtoul(json_object_get_string(label),0,10);
 	else
 		remotetimeStamp = 0;			//...I suppose this can be valid in some cases...like for "threshold" seconds when the time() clock rolls over [not a big deal]
 
 	label = json_object_object_get(root, "tilIgnore");
-	if ((label) && (!is_error(label)))
+	if (label)
 	{
 		if (json_object_get_boolean(label))
 			nitzFlags |= NITZHANDLER_FLAGBIT_IGNORE_TIL_SET;
@@ -3365,7 +3365,7 @@ bool TimePrefsHandler::cbServiceStateTracker(LSHandle* lsHandle, LSMessage *mess
 		return true;
 	}
 	root = json_tokener_parse(str);
-	if ((root == NULL) || (is_error(root))) {
+	if (!root) {
 		root = NULL;
 		return true;
 	}
@@ -3706,7 +3706,7 @@ bool TimePrefsHandler::cbSetTimeChangeLaunch(LSHandle* lsHandle, LSMessage *mess
 
 	jsonInput = json_tokener_parse(str);
 
-	if ((!jsonInput) || is_error(jsonInput)) {
+	if (!jsonInput) {
 		jsonInput=0;
 		errorText = "couldn't parse json parameters";
 		goto Done;
@@ -3748,7 +3748,7 @@ bool TimePrefsHandler::cbSetTimeChangeLaunch(LSHandle* lsHandle, LSMessage *mess
 	//get the currently stored list of launch apps
 	rawCurrentPref = PrefsDb::instance()->getPref("timeChangeLaunch");
 	storedJson = json_tokener_parse(rawCurrentPref.c_str());
-	if ((storedJson == NULL) || (is_error(storedJson))) {
+	if (!storedJson) {
 		storedJson = json_object_new_object();
 	}
 
@@ -4023,7 +4023,7 @@ bool TimePrefsHandler::cbConvertDate(LSHandle* pHandle, LSMessage* pMessage, voi
     //json_t* json_o = json_parse_document(str);
     struct json_object *json_o = json_tokener_parse(str);
 
-	if (!json_o || is_error(json_o)) {
+	if (!json_o) {
 		json_o = 0;
 		error_text = g_strdup("bad payload (no json)");
 		goto respond;
@@ -4292,7 +4292,7 @@ bool TimePrefsHandler::cbTelephonyPlatformQuery(LSHandle* lsHandle, LSMessage *m
     struct json_object* root = json_tokener_parse(payload);
     struct json_object* label = 0;
 
-    if (!root || is_error(root))
+    if (!root)
         return false;
 
     if (!json_object_is_type(root, json_type_object))
@@ -4302,19 +4302,19 @@ bool TimePrefsHandler::cbTelephonyPlatformQuery(LSHandle* lsHandle, LSMessage *m
     }
 
     label = json_object_object_get(root, "extended");
-    if (!label || is_error(label)) {
+    if (!label) {
         json_object_put(root);
         return false;
     }
 
     label = json_object_object_get(label, "capabilities");
-    if (!label || is_error(label)) {
+    if (!label) {
         json_object_put(root);
         return false;
     }
 
     label = json_object_object_get(label, "hfenable");
-    if (!label || is_error(label) || !json_object_is_type(label, json_type_boolean)) {
+    if (!label || !json_object_is_type(label, json_type_boolean)) {
         json_object_put(root);
         return false;
     }

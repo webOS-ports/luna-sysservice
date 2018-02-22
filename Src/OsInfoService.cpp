@@ -194,7 +194,7 @@ bool OsInfoService::cbGetOsInformation(LSHandle* lsHandle, LSMessage *message, v
 	}
 
 	payload = json_tokener_parse(payload_data);
-	if (!payload || is_error(payload) || !json_object_is_type(payload, json_type_object)) {
+	if (!payload || !json_object_is_type(payload, json_type_object)) {
 		reply = "{\"returnValue\": false, "
 		        " \"errorText\": \"Cannot parse/validate json payload\"}";
 		goto Done;
@@ -273,11 +273,11 @@ Done:
 		nyx_device_close(device);
 	nyx_deinit();
 
-	if (payload && !is_error(payload))
+	if (payload)
 		json_object_put(payload);
-	if (payloadParameterList && !is_error(payloadParameterList))
+	if (payloadParameterList)
 		json_object_put(payloadParameterList);
-	if (jsonResult && !is_error(jsonResult))
+	if (jsonResult)
 		json_object_put(jsonResult);
 
 	return true;

@@ -221,7 +221,7 @@ bool TimeZoneService::cbGetTimeZoneRules(LSHandle* lsHandle, LSMessage *message,
 	}
 
 	root = json_tokener_parse(payload);
-	if (!root || is_error(root)) {
+	if (!root) {
 		reply = "{\"returnValue\": false, "
 				" \"errorText\": \"Cannot parse json payload\"}";
 		goto Done;
@@ -295,7 +295,7 @@ Done:
 	if (!ret)
 		LSErrorFree(&lsError);
 
-	if (root && !is_error(root))
+	if (root)
 		json_object_put(root);
 
 	return true;
@@ -553,7 +553,7 @@ bool TimeZoneService::cbGetTimeZoneFromEasData(LSHandle* lsHandle, LSMessage *me
 	}
 
 	root = json_tokener_parse(payload);
-	if (!root || is_error(root)) {
+	if (!root) {
 		reply = "{\"returnValue\": false, "
 				" \"errorText\": \"Cannot parse json payload\"}";
 		goto Done;
@@ -729,7 +729,7 @@ Done:
 	if (!ret)
 		LSErrorFree(&lsError);
 
-	if (root && !is_error(root))
+	if (root)
 		json_object_put(root);
 
 	return true;	

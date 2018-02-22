@@ -45,7 +45,7 @@ public:
 		// the way it is now makes a useless conversion at least once
 
 		json_object * jo = json_tokener_parse(strval.c_str());
-		if (!jo || is_error(jo)) {
+		if (!jo) {
 			return;
 		}
 		valueChanged(key,jo);

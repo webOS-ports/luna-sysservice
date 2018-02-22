@@ -96,11 +96,11 @@ bool NetworkConnectionListener::connectionManagerConnectCallback(LSHandle *sh, L
 	
 	label = 0;
 	json = json_tokener_parse(payload);
-	if (!json || is_error(json))
+	if (!json)
 		return true;
 
 	label = json_object_object_get(json, "connected");
-	if (!label || is_error(label)) {
+	if (!label) {
 		json_object_put(json);
 		return true;
 	}
@@ -152,12 +152,12 @@ bool NetworkConnectionListener::connectionManagerGetStatusCallback(LSHandle *sh,
 	bool isInternetConnectionAvailable;
 
 	json = json_tokener_parse(payload);
-	if (!json || is_error(json)) {
+	if (!json) {
 		return true;
 	}
 
 	label = json_object_object_get(json, "isInternetConnectionAvailable");
-	if (label && !is_error(label)) {
+	if (label) {
 		isInternetConnectionAvailable = json_object_get_boolean(label);
 	}
     else {

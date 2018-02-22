@@ -212,7 +212,7 @@ static bool cbAddRingtone(LSHandle* lsHandle, LSMessage *message,void *user_data
 		
 	root = json_tokener_parse(payload);
 	
-	if (!root || is_error(root)) {
+	if (!root) {
 		root = 0;
 		success = false;
 		errorText = std::string("couldn't parse json");
@@ -220,7 +220,7 @@ static bool cbAddRingtone(LSHandle* lsHandle, LSMessage *message,void *user_data
 	}
 	
 	label = json_object_object_get(root, "filePath");
-	if(!label || is_error(label)) {
+	if(!label) {
 		success = false;
 		errorText = std::string("source file missing");
 		goto Done;
@@ -376,7 +376,7 @@ static bool cbDeleteRingtone(LSHandle* lsHandle, LSMessage *message, void *user_
 		
 	root = json_tokener_parse(payload);
 
-	if (!root || is_error(root)) {
+	if (!root) {
 		root = 0;
 		success = false;
 		errorText = std::string("couldn't parse json");
@@ -384,7 +384,7 @@ static bool cbDeleteRingtone(LSHandle* lsHandle, LSMessage *message, void *user_
 	}
 	
 	label = json_object_object_get(root, "filePath");
-	if(!label || is_error(label)) {
+	if(!label) {
 		success = false;
 		errorText = std::string("filePath is missing");
 		goto Done;

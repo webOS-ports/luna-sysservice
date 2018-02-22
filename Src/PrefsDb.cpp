@@ -642,7 +642,7 @@ void PrefsDb::synchronizeDefaults() {
 	gchar* queryStr;
 
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root)) {
+	if (!root) {
 		delete [] jsonStr;
 		qWarning() << "Failed to parse file contents into json";
 		return;
@@ -651,7 +651,7 @@ void PrefsDb::synchronizeDefaults() {
 	delete [] jsonStr;
 
 	label = json_object_object_get(root, "preferences");
-	if (!label || is_error(label) || !json_object_is_type(label, json_type_object)) {
+	if (!label || !json_object_is_type(label, json_type_object)) {
 		qWarning() << "Failed to get valid preferences entry from file";
 		json_object_put(root);
 		return;
@@ -707,13 +707,13 @@ void PrefsDb::synchronizePlatformDefaults() {
 	gchar* queryStr;
 
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root)) {
+	if (!root) {
 		qWarning() << "Failed to parse file contents into json";
 		return;
 	}
 
 	label = json_object_object_get(root, "preferences");
-	if (!label || is_error(label) || !json_object_is_type(label, json_type_object)) {
+	if (!label || !json_object_is_type(label, json_type_object)) {
 		qWarning() << "Failed to get valid preferences entry from file";
 		json_object_put(root);
 		return;
@@ -767,7 +767,7 @@ void PrefsDb::synchronizeCustomerCareInfo() {
 	gchar* queryStr;
 
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root) || !json_object_is_type(root, json_type_object)) {
+	if (!root || !json_object_is_type(root, json_type_object)) {
 		qWarning() << "Failed to parse file contents into valid json";
 		return;
 	}
@@ -826,7 +826,7 @@ void PrefsDb::updateWithCustomizationPrefOverrides()
 	gchar* queryStr;
 
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root)) {
+	if (!root) {
 		delete [] jsonStr;
 		qWarning() << "Failed to parse file contents into json";
 		return;
@@ -835,7 +835,7 @@ void PrefsDb::updateWithCustomizationPrefOverrides()
 	delete [] jsonStr;
 
 	label = json_object_object_get(root, "preferences");
-	if (!label || is_error(label) || !json_object_is_type(label, json_type_object)) {
+	if (!label || !json_object_is_type(label, json_type_object)) {
 		qWarning() << "Failed to get valid preferences entry from file";
 		json_object_put(root);
 		return;
@@ -889,13 +889,13 @@ void PrefsDb::loadDefaultPrefs()
 	const char * p_cDbv;
 
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root)) {
+	if (!root) {
 		qWarning() << "Failed to parse preferences file contents into json";
 		goto Stage1a;
 	}
 
 	label = json_object_object_get(root, "preferences");
-	if (!label || is_error(label) || !json_object_is_type(label, json_type_object)) {
+	if (!label || !json_object_is_type(label, json_type_object)) {
 		qWarning() << "Failed to get valid preferences entry from file";
 		goto Stage1a;
 	}
@@ -928,7 +928,7 @@ Stage1a:
 	if (jsonStr) {
 		delete [] jsonStr;
 	}
-	if (root && !is_error(root))
+	if (root)
 		json_object_put(root);
 
 	root = 0;
@@ -960,7 +960,7 @@ Stage2:
 	}
 
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root) || !json_object_is_type(root, json_type_object)) {
+	if (!root || !json_object_is_type(root, json_type_object)) {
 		qWarning() << "Failed to parse customer care # file contents into valid json";
 		goto Stage3;
 	}
@@ -999,7 +999,7 @@ Stage3:
 	if (jsonStr) {
 		delete [] jsonStr;
 	}
-	if (root && !is_error(root))
+	if (root)
 		json_object_put(root);
 
 	root = 0;
@@ -1035,7 +1035,7 @@ Stage3:
 	queryStr = 0;
 Done:
 
-	if (root && !is_error(root))
+	if (root)
 		json_object_put(root);
 
 	//back up the defaults for certain prefs
@@ -1061,13 +1061,13 @@ void PrefsDb::loadDefaultPlatformPrefs()
 	gchar* queryStr;
 
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root)) {
+	if (!root) {
 		qWarning() << "Failed to parse preferences file contents into json";
 		goto Done;
 	}
 
 	label = json_object_object_get(root, "preferences");
-	if (!label || is_error(label) || !json_object_is_type(label, json_type_object)) {
+	if (!label || !json_object_is_type(label, json_type_object)) {
 		qWarning() << "Failed to get valid preferences entry from file";
 		goto Done;
 	}
@@ -1095,7 +1095,7 @@ void PrefsDb::loadDefaultPlatformPrefs()
 
 Done:
 
-	if (root && !is_error(root))
+	if (root)
 		json_object_put(root);
 
 	if (jsonStr) {

@@ -369,7 +369,7 @@ static bool cbSetPreferences(LSHandle* lsHandle, LSMessage* message,
 	}
 
 	root = json_tokener_parse(payload);
-	if (!root || is_error(root)) {
+	if (!root) {
 		root=0;
 		success = false;
 		errorText = std::string("couldn't parse json");
@@ -559,15 +559,15 @@ static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message,
 	LSErrorInit(&lsError);
 
 	root = json_tokener_parse(payload);
-	if (!root || is_error(root))
+	if (!root)
 		goto Done;
 
 	label = json_object_object_get(root, "subscribe");
-	if (label && !is_error(label))
+	if (label)
 		subscription = json_object_get_boolean(label);
 
 	label = json_object_object_get(root, "keys");
-	if (!label || is_error(label)) {
+	if (!label) {
 		errorCode = "no keys specified";
 		goto Done;
 	}
@@ -585,7 +585,7 @@ static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message,
 
 	for (int i = 0; i < array_list_length(keyArray); i++) {
 		json_object* obj = (json_object*) array_list_get_idx(keyArray, i);
-		if (!obj || is_error(obj))
+		if (!obj)
 			continue;
 //		printf("getPrefs: [%s]",json_object_get_string(obj));
 		if (!json_object_is_type(obj,json_type_string))
@@ -622,7 +622,7 @@ static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message,
 	for (std::map<std::string, std::string>::const_iterator it = resultMap.begin();
 		 it != resultMap.end(); ++it) {
 		json_object* value = json_tokener_parse((*it).second.c_str());
-		if (value && (!is_error(value))) {
+		if (value) {
 			qDebug("resultMap: [%s] -> [---, length %zu]",(*it).first.c_str(),(*it).second.size());
 			json_object_object_add(replyRoot,
 					(char*) (*it).first.c_str(), value);
@@ -639,7 +639,7 @@ static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message,
 
 Done:
 
-	if (!is_error(replyRoot) && (success))
+	if (replyRoot && (success))
 		reply = json_object_to_json_string(replyRoot);
 	else {
 		reply = "{\"returnValue\":false,\"subscribed\":false , \"errorCode\":\""+errorCode+"\"}";
@@ -652,10 +652,10 @@ Done:
 	if (!retVal)
 		LSErrorFree (&lsError);
 
-	if (replyRoot && !is_error(replyRoot))
+	if (replyRoot)
 		json_object_put(replyRoot);
 
-	if (root && !is_error(root))
+	if (root)
 		json_object_put(root);
 
 	return true;
@@ -752,11 +752,11 @@ static bool cbGetPreferenceValues(LSHandle* lsHandle, LSMessage* message,
 	LSErrorInit(&lsError);
 
 	root = json_tokener_parse(payload);
-	if (!root || is_error(root))
+	if (!root)
 		goto Done;
 
 	label = json_object_object_get(root, "key");
-	if (!label || is_error(label))
+	if (!label)
 		goto Done;
 	key = json_object_get_string(label);
 
@@ -765,7 +765,7 @@ static bool cbGetPreferenceValues(LSHandle* lsHandle, LSMessage* message,
 		goto Done;
 
 	replyRoot = handler->valuesForKey(key);
-	if (!replyRoot || is_error(replyRoot))
+	if (!replyRoot)
 		goto Done;
 
 	json_object_object_add(replyRoot,"returnValue",json_object_new_boolean(true));
@@ -781,10 +781,10 @@ Done:
 	if (!retVal)
 		LSErrorFree (&lsError);
 
-	if (replyRoot && !is_error(replyRoot))
+	if (replyRoot)
 		json_object_put(replyRoot);
 
-	if (root && !is_error(root))
+	if (root)
 		json_object_put(root);
 
 	return true;

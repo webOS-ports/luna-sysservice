@@ -186,7 +186,7 @@ bool ImageServices::lsConvertImage(LSHandle* lsHandle, LSMessage* message,void* 
 	}
 
 	root = json_tokener_parse( str );
-	if (!root || is_error(root)) {
+	if (!root) {
 		errorText = "Malformed JSON detected in payload";
 		root = 0;
 		goto Done_lsConvertImage;
@@ -396,7 +396,7 @@ bool ImageServices::lsEzResize(LSHandle* lsHandle, LSMessage* message,void* user
 	}
 
 	root = json_tokener_parse( str );
-	if (!root || is_error(root)) {
+	if (!root) {
 		errorText = "Malformed JSON detected in payload";
 		root = 0;
 		goto Done_ezResize;
@@ -562,7 +562,7 @@ bool ImageServices::lsImageInfo(LSHandle* lsHandle, LSMessage* message,void* use
 	}
 
 	root = json_tokener_parse( str );
-	if (!root || is_error(root)) {
+	if (!root) {
 		errorText = "Malformed JSON detected in payload";
 		root = 0;
 		goto Done_lsImageInfo;

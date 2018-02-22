@@ -64,14 +64,14 @@ SystemRestore::SystemRestore() : m_msmState(Phone)
 	}
 
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root)) {
+	if (!root) {
 		root = 0;
         qWarning() << "Failed to parse file contents into json";
 		goto Platform;
 	}
 
 	label = json_object_object_get(root, "preferences");
-	if (!label || is_error(label) || !json_object_is_type(label, json_type_object)) {
+	if (!label || !json_object_is_type(label, json_type_object)) {
 		qWarning() << "Failed to get valid preferences entry from file";
 		goto Platform;
 	}
@@ -105,14 +105,14 @@ Platform:
 	}
 		
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root)) {
+	if (!root) {
 		root = 0;
         qWarning() << "Failed to parse file [" << PrefsDb::s_defaultPlatformPrefsFile << "] contents into json";
 		goto Exit;
 	}
 
 	label = json_object_object_get(root, "preferences");
-	if (!label || is_error(label) || !json_object_is_type(label, json_type_object)) {
+	if (!label || !json_object_is_type(label, json_type_object)) {
 		qWarning() << "Failed to get valid preferences entry from file";
 		goto Exit;
 	}
@@ -266,14 +266,14 @@ int SystemRestore::restoreDefaultRingtoneSetting()
 	std::string valueStr;
 		
 	root = json_tokener_parse(defaultRingtoneString.c_str());
-	if (!root || is_error(root)) {
+	if (!root) {
         qWarning() << "Failed to parse string into json";
 		root = 0;
 		goto Exit;
 	}
 	
 	label = json_object_object_get(root, "fullPath");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "Failed to parse ringtone details";
 		goto Exit;
 	}
@@ -310,14 +310,14 @@ int SystemRestore::restoreDefaultWallpaperSetting()
 	std::string valueStr;
 
 	root = json_tokener_parse(defaultWallpaperString.c_str());
-	if (!root || is_error(root)) {
+	if (!root) {
         qWarning() << "Failed to parse string into json";
 		root = 0;
 		goto Exit;
 	}
 
 	label = json_object_object_get(root, "wallpaperFile");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "Failed to parse wallpaper details";
 		goto Exit;
 	}
@@ -362,14 +362,14 @@ bool SystemRestore::isRingtoneSettingConsistent()
 	
 	//parse the setting
 	root = json_tokener_parse(ringToneRawPref.c_str());
-	if (!root || is_error(root)) {
+	if (!root) {
         qWarning() << "Failed to parse string into json";
 		root = 0;
 		goto Exit;
 	}
 
 	label = json_object_object_get(root, "fullPath");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "Failed to parse ringtone details";
 		goto Exit;
 	}
@@ -411,14 +411,14 @@ bool SystemRestore::isWallpaperSettingConsistent()
 
 	//parse the setting
 	root = json_tokener_parse(wallpaperRawPref.c_str());
-	if (!root || is_error(root)) {
+	if (!root) {
         qWarning() << "Failed to parse string into json";
 		root = 0;
 		goto Exit;
 	}
 
 	label = json_object_object_get(root, "wallpaperFile");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "Failed to parse wallpaper details";
 		goto Exit;
 	}
@@ -458,14 +458,14 @@ void SystemRestore::refreshDefaultSettings()
 
 	//parse the setting
 	root = json_tokener_parse(wallpaperRawDefaultPref.c_str());
-	if (!root || is_error(root)) {
+	if (!root) {
         qWarning() << "Failed to parse string into json";
 		root = 0;
 		goto Stage2;
 	}
 
 	label = json_object_object_get(root, "wallpaperFile");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "Failed to parse wallpaper details";
 		goto Stage2;
 	}
@@ -487,14 +487,14 @@ void SystemRestore::refreshDefaultSettings()
 
 	//parse the setting
 	root = json_tokener_parse(ringtoneRawDefaultPref.c_str());
-	if (!root || is_error(root)) {
+	if (!root) {
         qWarning() << "Failed to parse string into json";
 		root = 0;
 		goto Exit;
 	}
 
 	label = json_object_object_get(root, "fullPath");
-	if (!label || is_error(label)) {
+	if (!label) {
         qWarning() << "Failed to parse ringtone details";
 		goto Exit;
 	}
@@ -504,7 +504,7 @@ void SystemRestore::refreshDefaultSettings()
 
 	Exit:
 
-	if ((root) && !is_error(root)) {
+	if (root) {
 		json_object_put(root);
 	}
 }
@@ -706,7 +706,7 @@ bool SystemRestore::msmAvail(LSMessage* message)
 		return false;
 	
 	struct json_object* payload = json_tokener_parse(str);
-	if (is_error(payload))
+	if (!payload)
 		return false;
 
 	struct json_object* modeAvail = json_object_object_get(payload, "mode-avail");
@@ -752,7 +752,7 @@ bool SystemRestore::msmProgress(LSMessage* message)
 		return false;
 	
 	struct json_object* payload = json_tokener_parse(str);
-	if (is_error(payload))
+	if (!payload)
 		return false;
 
 	struct json_object* stage = json_object_object_get(payload, "stage");
@@ -779,12 +779,12 @@ bool SystemRestore::msmEntry(LSMessage* message)
 		return false;
 	
 	struct json_object* payload = json_tokener_parse(str);
-	if (is_error(payload))
+	if (!payload)
 		return false;
 
 	std::string modeStr("UNKNOWN");
 	struct json_object* mode = json_object_object_get(payload, "new-mode");
-	if (mode && (!is_error(mode))) {
+	if (mode) {
 		modeStr = std::string(json_object_get_string(mode));
 		if (modeStr == "brick") {
 			m_msmState = Brick;
@@ -823,7 +823,7 @@ bool SystemRestore::msmPartitionAvailable(LSMessage* message)
 		return false;
 
 	struct json_object* payload = json_tokener_parse(str);
-	if (is_error(payload))
+	if (!payload)
 		return false;
 
 	struct json_object* label = json_object_object_get(payload, "mount_point");
@@ -834,7 +834,7 @@ bool SystemRestore::msmPartitionAvailable(LSMessage* message)
 		mountPoint = std::string(json_object_get_string(label));
 	
 	label = json_object_object_get(payload, "available");
-	if (label && (!is_error(label)))
+	if (label)
 		available = json_object_get_boolean(label);
 	
 	qDebug("msmPartitionAvailable(): mount point: [%s] , available: %s",mountPoint.c_str(),(available ? "true" : "false"));

@@ -263,11 +263,11 @@ void LocalePrefsHandler::readCurrentRegionSetting()
 
 		json_object* label = 0;
 		json_object* json = json_tokener_parse(region.c_str());
-		if (!json || is_error(json))
+		if (!json)
 			goto Done;
 
 		label = json_object_object_get(json, "countryCode");
-		if (!label || is_error(label))
+		if (!label)
 			goto Done;
 		m_regionCode = json_object_get_string(label);
 
@@ -275,7 +275,7 @@ void LocalePrefsHandler::readCurrentRegionSetting()
 
 	Done:
 
-		if (json && !is_error(json))
+		if (json)
 			json_object_put(json);
 	}
 
@@ -293,16 +293,16 @@ void LocalePrefsHandler::readCurrentLocaleSetting()
 
 		json_object* label = 0;
 		json_object* json = json_tokener_parse(locale.c_str());
-		if (!json || is_error(json))
+		if (!json)
 			goto Done;
 
 		label = json_object_object_get(json, "languageCode");
-		if (!label || is_error(label))
+		if (!label)
 			goto Done;
 		m_languageCode = json_object_get_string(label);
 
 		label = json_object_object_get(json, "countryCode");
-		if (!label || is_error(label))
+		if (!label)
 			goto Done;
 		m_countryCode = json_object_get_string(label);
 
@@ -310,7 +310,7 @@ void LocalePrefsHandler::readCurrentLocaleSetting()
 
 	Done:
 
-		if (json && !is_error(json))
+		if (json)
 			json_object_put(json);
 	}
 
@@ -337,14 +337,14 @@ void LocalePrefsHandler::readLocaleFile()
 	array_list* localeArray = 0;
 
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root)) {
+	if (!root) {
         //luna_critical(s_logChannel, "Failed to parse locale file contents into json");
         qCritical() << "Failed to parse locale file contents into json";
 		goto Done;
 	}
 
 	label = json_object_object_get(root, "locale");
-	if (!label || is_error(label)) {
+	if (!label) {
         //luna_critical(s_logChannel, "Failed to get locale entry from locale file");
         qCritical() << "Failed to get locale entry from locale file";
 		goto Done;
@@ -364,19 +364,19 @@ void LocalePrefsHandler::readLocaleFile()
 		array_list* countryArray = 0;
 		
 		label = json_object_object_get(obj, "languageName");
-		if (!label || is_error(label))
+		if (!label)
 			continue;
 
 		localeEntry.language.first = json_object_get_string(label);
 
 		label = json_object_object_get(obj, "languageCode");
-		if (!label || is_error(label))
+		if (!label)
 			continue;
 
 		localeEntry.language.second = json_object_get_string(label);
 
 		label = json_object_object_get(obj, "countries");
-		if (!label || is_error(label))
+		if (!label)
 			continue;
 
 		countryArray = json_object_get_array(label);
@@ -385,13 +385,13 @@ void LocalePrefsHandler::readLocaleFile()
 			NameCodePair country;
 
 			label = json_object_object_get(countryObj, "countryName");
-			if (!label || is_error(label))
+			if (!label)
 				continue;
 
 			country.first = json_object_get_string(label);
 
 			label = json_object_object_get(countryObj, "countryCode");
-			if (!label || is_error(label))
+			if (!label)
 				continue;
 
 			country.second = json_object_get_string(label);
@@ -404,7 +404,7 @@ void LocalePrefsHandler::readLocaleFile()
 
 Done:
 
-	if (root && !is_error(root))
+	if (root)
 		json_object_put(root);
 
 	delete [] jsonStr;
@@ -427,14 +427,14 @@ void LocalePrefsHandler::readRegionFile()
 	array_list* regionArray = 0;
 
 	root = json_tokener_parse(jsonStr);
-	if (!root || is_error(root)) {
+	if (!root) {
         //luna_critical(s_logChannel, "Failed to parse region file contents into json");
         qCritical() << "Failed to parse region file contents into json";
 		goto Done;
 	}
 
 	label = json_object_object_get(root, "region");
-	if (!label || is_error(label)) {
+	if (!label) {
         //luna_critical(s_logChannel, "Failed to get region entry from region file");
         qCritical() << "Failed to get region entry from region file";
 		goto Done;
@@ -453,19 +453,19 @@ void LocalePrefsHandler::readRegionFile()
 		RegionEntry regionEntry;
 
 		label = json_object_object_get(obj, "countryName");
-		if (!label || is_error(label))
+		if (!label)
 			continue;
 
 		regionEntry.region[1] = std::string(json_object_get_string(label));
 		
 		label = json_object_object_get(obj, "shortCountryName");
-		if (!label || is_error(label))
+		if (!label)
 			regionEntry.region[0] = regionEntry.region[1];
 		else
 			regionEntry.region[0] = std::string(json_object_get_string(label));
 		
 		label = json_object_object_get(obj, "countryCode");
-		if (!label || is_error(label))
+		if (!label)
 			continue;
 
 		regionEntry.region[2] = std::string(json_object_get_string(label));
@@ -475,7 +475,7 @@ void LocalePrefsHandler::readRegionFile()
 
 	Done:
 
-	if (root && !is_error(root))
+	if (root)
 		json_object_put(root);
 
 	delete [] jsonStr;

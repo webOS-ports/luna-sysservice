@@ -1256,7 +1256,7 @@ static bool cbImportWallpaper(LSHandle* lsHandle, LSMessage *message,
 	struct json_object* root = json_tokener_parse(str);
 	struct json_object* label = 0;
 	
-	if (is_error(root)) {
+	if (!root) {
 		root = 0;
 		success = false;
 		errorText = std::string("couldn't parse json :(");
@@ -1310,17 +1310,17 @@ static bool cbImportWallpaper(LSHandle* lsHandle, LSMessage *message,
 	c=0;
 	//attempt to get additional parameters
 	label = json_object_object_get(root,"focusX");
-	if ((label) && (!is_error(label))) {
+	if (label) {
 		fx = json_object_get_double(label);
 		++c;
 	}
 	label = json_object_object_get(root,"focusY");
-	if ((label) && (!is_error(label))) {
+	if (label) {
 		fy = json_object_get_double(label);
 		++c;
 	}
 	label = json_object_object_get(root,"scale");
-	if ((label) && (!is_error(label))) {
+	if (label) {
 		scaleFactor = json_object_get_double(label);
 		++c;
 	}
@@ -1514,7 +1514,7 @@ static bool cbConvertImage(LSHandle* lsHandle, LSMessage *message,
 	struct json_object* root = json_tokener_parse(str);
 	struct json_object* label = 0;
 
-	if (is_error(root)) {
+	if (!root) {
 		root = 0;
 		success = false;
 		errorText = std::string("couldn't parse json");
@@ -1609,17 +1609,17 @@ static bool cbConvertImage(LSHandle* lsHandle, LSMessage *message,
 
 	//attempt to get additional parameters
 	label = json_object_object_get(root,"focusX");
-	if ((label) && (!is_error(label))) {
+	if (label) {
 		fx = json_object_get_double(label);
 		justConvert=false;
 	}
 	label = json_object_object_get(root,"focusY");
-	if ((label) && (!is_error(label))) {
+	if (label) {
 		fy = json_object_get_double(label);
 		justConvert=false;
 	}
 	label = json_object_object_get(root,"scale");
-	if ((label) && (!is_error(label))) {
+	if (label) {
 		scaleFactor = json_object_get_double(label);
 		justConvert=false;
 	}
@@ -1836,7 +1836,7 @@ static bool cbGetWallpaperSpec(LSHandle* lsHandle, LSMessage *message,
 
 	WallpaperPrefsHandler* wh = (WallpaperPrefsHandler*) user_data;
 	
-	if (is_error(root)) {
+	if (!root) {
 		root = 0;
 		retVal = false;
 		errorText = std::string("couldn't parse json");
@@ -1851,7 +1851,7 @@ static bool cbGetWallpaperSpec(LSHandle* lsHandle, LSMessage *message,
 	}
 
 	label = json_object_object_get(root,"wallpaperName");
-	if ((label) && (!is_error(label))) {
+	if (label) {
 		wallpaperName = json_object_get_string(label);
 		retVal = wh->getWallpaperSpecFromName(wallpaperName,wallpaperFile,wallpaperThumbFile);
 		if (!retVal)
@@ -1860,7 +1860,7 @@ static bool cbGetWallpaperSpec(LSHandle* lsHandle, LSMessage *message,
 	}
 
 	label = json_object_object_get(root,"wallpaperFile");
-	if ((label) && (!is_error(label))) {
+	if (label) {
 		wallpaperFile = json_object_get_string(label);
 		retVal = wh->getWallpaperSpecFromFilename(wallpaperName,wallpaperFile,wallpaperThumbFile);
 		if (!retVal)
@@ -1990,7 +1990,7 @@ static bool cbDeleteWallpaper(LSHandle* lsHandle, LSMessage *message,
 
 	WallpaperPrefsHandler* wh = (WallpaperPrefsHandler*) user_data;
 
-	if (is_error(root)) {
+	if (!root) {
 		root = 0;
 		retVal = false;
 		errorText = std::string("couldn't parse json");
@@ -2005,7 +2005,7 @@ static bool cbDeleteWallpaper(LSHandle* lsHandle, LSMessage *message,
 	}
 
 	label = json_object_object_get(root,"wallpaperName");
-	if ((label) && (!is_error(label))) {
+	if (label) {
 		wallpaperName = json_object_get_string(label);
 		retVal = wh->deleteWallpaper(wallpaperName);
 		if (!retVal)

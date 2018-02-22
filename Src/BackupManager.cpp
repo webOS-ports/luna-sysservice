@@ -105,12 +105,12 @@ void BackupManager::copyKeysToBackupDb()
 		return;
 	//open the backup keys list to figure out what to copy
 	json_object * backupKeysJson = json_object_from_file((char *)(BackupManager::s_backupKeylistFilename.c_str()));
-	if (!backupKeysJson || is_error(backupKeysJson))
+	if (!backupKeysJson)
 		return;
 	//iterate over all the keys
 	std::list<std::string> keylist;
 	array_list* fileArray = json_object_get_array(backupKeysJson);
-	if (!fileArray || is_error(fileArray))
+	if (!fileArray)
 	{
         qWarning () << "file does not contain an array of string keys";
 		return;
@@ -125,7 +125,7 @@ void BackupManager::copyKeysToBackupDb()
 	for (index = 0; index < fileArrayLength; ++index)
 	{
 		json_object* obj = (json_object*) array_list_get_idx (fileArray, index);
-		if ((!obj) || is_error(obj))
+		if (!obj)
 		{
             qWarning() << "array object [" << index << "] isn't valid (skipping)";
 			continue;
@@ -275,7 +275,7 @@ bool BackupManager::preBackupCallback( LSHandle* lshandle, LSMessage *message, v
     }
     qDebug("received %s", str);
     json_object* root = json_tokener_parse(str);
-    if (!root || is_error(root))
+    if (!root)
     {
         qWarning() << "text payload didn't contain valid json message, was: [" << str << "]";
     	return false;
@@ -283,7 +283,7 @@ bool BackupManager::preBackupCallback( LSHandle* lshandle, LSMessage *message, v
     json_object* tempDirLabel = json_object_object_get (root, "tempDir");
     char const *tempDir;
     bool myTmp = false;
-    if (!tempDirLabel || is_error(tempDirLabel))
+    if (!tempDirLabel)
     {
         qWarning () << "No tempDir specified in preBackup message";
     	tempDir = PrefsDb::s_prefsPath;
@@ -404,7 +404,7 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
     }
 
     json_object* root = json_tokener_parse(str);
-    if (!root || is_error(root))
+    if (!root)
     {
         qWarning() << "text payload didn't contain valid json [message was: [" << str << "] ]";
         json_object_object_add (response, "returnValue", json_object_new_boolean(false));
@@ -422,7 +422,7 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
 
     json_object* tempDirLabel = json_object_object_get (root, "tempDir");
     std::string tempDir;
-    if ((!tempDirLabel) || is_error(tempDirLabel))
+    if (!tempDirLabel)
     {
         qWarning () << "No tempDir specified in postRestore message";
         tempDir = "";		//try and ignore it...hopefully all the files will have abs. paths
@@ -446,7 +446,7 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
     }
 
     json_object* files = json_object_object_get (root, "files");
-    if (!files || is_error(files))
+    if (!files)
     {
         qWarning () << "No files specified in postRestore message";
         json_object_object_add (response, "returnValue", json_object_new_boolean(false));
@@ -463,7 +463,7 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
     }
 
     array_list* fileArray = json_object_get_array(files);
-    if (!fileArray || is_error(fileArray))
+    if (!fileArray)
     {
         qWarning () << "json value for key 'files' is not an array";
         json_object_object_add (response, "returnValue", json_object_new_boolean(false));
@@ -488,7 +488,7 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
     for (index = 0; index < fileArrayLength; ++index)
     {
     	json_object* obj = (json_object*) array_list_get_idx (fileArray, index);
-    	if ((!obj) || is_error(obj))
+    	if (!obj)
     	{
             qWarning() << "array object [%d] isn't valid (skipping)";
      		continue;
@@ -550,7 +550,7 @@ bool BackupManager::sendPreBackupResponse(LSHandle* lshandle, LSMessage *message
 	// files - array of files to be backed up
 	// version - version of the service
 	json_object* response = json_object_new_object();
-	if (!response || is_error(response)) {
+	if (!response) {
         qWarning() << "Unable to allocate json object";
 		return false;
 	}

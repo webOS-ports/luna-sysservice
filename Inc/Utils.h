@@ -90,7 +90,7 @@ std::string base64_decode(std::string const& s);
 bool extractFromJson(const std::string& jsonString,const std::string& key,std::string& r_value);
 bool extractFromJson(struct json_object * root,const std::string& key,std::string& r_value);
 
-//Wrapper on CJSON to avoid ptr values of -1 (and the use of is_error)
+//Wrapper on CJSON to avoid ptr values of -1
 struct json_object * JsonGetObject(struct json_object * root,const std::string& key);
 
 void _dbgprintf(const char * format,...);
