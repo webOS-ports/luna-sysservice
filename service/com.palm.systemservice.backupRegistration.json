@@ -1,5 +1,0 @@
-{
-    "id": "com.palm.systemservice",
-    "preBackup": "backup/preBackup",
-    "postRestore": "backup/postRestore"
-}
