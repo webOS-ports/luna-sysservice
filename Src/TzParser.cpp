@@ -431,7 +431,8 @@ TzTransitionList parseTimeZone(const char* tzName)
 		const ttentry& entry = ttEntryList[i];
 		const ttinfo& info   = ttInfoList[entry.indexToLocalTime];
 		struct tm* gmTime    = gmtime(&entry.time);
-		
+		if (NULL==gmTime) continue;
+
 		TzTransition trans;
 		trans.time        = entry.time;
 		trans.utcOffset   = info.gmtOffset;
