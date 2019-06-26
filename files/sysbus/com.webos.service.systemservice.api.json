@@ -37,7 +37,14 @@
 	"com.webos.service.systemservice/wallpaper/deleteWallpaper",
 	"com.webos.service.systemservice/wallpaper/importWallpaper",
 	"com.webos.service.systemservice/wallpaper/info",
-	"com.webos.service.systemservice/wallpaper/refresh"
+	"com.webos.service.systemservice/wallpaper/refresh",
+	"com.palm.image/convert",
+	"com.palm.image/imageInfo",
+	"com.palm.image/ezResize",
+	"com.webos.service.image/convert",
+	"com.webos.service.image/imageInfo",
+	"com.webos.service.image/ezResize"
+
 	],
   "settings.read": [
 	"com.webos.service.systemservice/deviceInfo/query",

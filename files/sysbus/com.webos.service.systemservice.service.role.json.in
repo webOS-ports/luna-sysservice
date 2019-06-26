@@ -1,7 +1,7 @@
 {
 	"exeName":"@WEBOS_INSTALL_SBINDIR@/LunaSysService",
 	"type": "regular",
-	"allowedNames": ["com.webos.service.systemservice"],
+	"allowedNames": ["com.palm.image", "com.webos.service.image", "com.webos.service.systemservice"],
 	"permissions": [
 		{
 			"service":"com.webos.service.systemservice",
