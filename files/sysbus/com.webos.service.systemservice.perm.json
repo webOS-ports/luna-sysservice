@@ -1,5 +1,8 @@
 {
 	"com.webos.service.systemservice":[
 		"networking", "settings", "system", "telephony", "applications.internal", "networking.internal"
+	],
+	"com.palm.systemservice":[
+		"all"
 	]
 }
