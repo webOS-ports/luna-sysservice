@@ -1,6 +1,14 @@
 {
 	"com.webos.service.systemservice":[
-		"networking", "settings", "system", "telephony", "applications.internal", "networking.internal"
+		"networking",
+		"settings",
+		"system",
+		"telephony",
+		"applications.internal",
+		"networking.internal", 
+		"sleep.release",
+		"sleep.internal",
+		"time"
 	],
 	"com.palm.systemservice":[
 		"all"
