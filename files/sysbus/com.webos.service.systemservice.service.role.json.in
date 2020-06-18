@@ -13,7 +13,9 @@
 				"com.webos.service.applicationManager",
 				"com.webos.service.activitymanager.client",
 				"com.webos.monitor",
-				"org.webosports.luna"
+				"org.webosports.luna",
+				"org.webosports.*",
+				"com.palm.*"
 			]
 		}
 	]
