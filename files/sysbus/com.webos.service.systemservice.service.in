@@ -1,4 +1,4 @@
 [D-BUS Service]
-Name=com.webos.service.systemservice
+Name=com.webos.service.systemservice;com.palm.image;com.webos.service.image
 Exec=@WEBOS_INSTALL_SBINDIR@/LunaSysService
 Type=static
