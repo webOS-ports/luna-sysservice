@@ -1,7 +1,7 @@
 {
 	"exeName":"@WEBOS_INSTALL_SBINDIR@/LunaSysService",
 	"type": "regular",
-	"allowedNames": ["com.webos.service.systemservice", "com.webos.service.image", "com.palm.image"],
+	"allowedNames": ["com.webos.service.systemservice", "com.webos.service.image"],
 	"permissions": [
 		{
 			"service":"com.webos.service.systemservice",
@@ -12,7 +12,7 @@
 				"com.webos.service.alarm",
 				"com.webos.service.applicationManager",
 				"com.webos.service.activitymanager.client",
-				"com.webos.monitor",
+				"com.webos.monitor*",
 				"org.webosports.luna",
 				"org.webosports.*",
 				"com.palm.*"
@@ -21,12 +21,15 @@
 		{
 			"service":"com.webos.service.image",
 			"outbound":[
-				"com.palm.*"
-			]
-		},
-		{
-			"service":"com.palm.image",
-			"outbound":[
+				"com.webos.service.connectionmanager",
+				"com.webos.service.settingsservice",
+				"com.webos.service.telephony",
+				"com.webos.service.alarm",
+				"com.webos.service.applicationManager",
+				"com.webos.service.activitymanager.client",
+				"com.webos.monitor*",
+				"org.webosports.luna",
+				"org.webosports.*",
 				"com.palm.*"
 			]
 		}

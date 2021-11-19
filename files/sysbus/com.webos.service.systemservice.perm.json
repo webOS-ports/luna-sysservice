@@ -13,10 +13,6 @@
 	"com.palm.systemservice":[
 		"all"
 	],
-	"com.palm.image":[
-		"applications",
-		"services"
-	],
 	"com.webos.service.image":[
 		"applications",
 		"services"
