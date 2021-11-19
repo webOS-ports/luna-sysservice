@@ -151,9 +151,6 @@
         "com.palm.systemservice/timezone/createTimeZoneFromEasData"
     ],
     "services": [
-        "com.palm.image/convert",
-        "com.palm.image/imageInfo",
-        "com.palm.image/resize",        
         "com.webos.service.image/convert",
         "com.webos.service.image/imageInfo",
         "com.webos.service.image/resize"
