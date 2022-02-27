@@ -15,7 +15,8 @@
 				"com.webos.monitor*",
 				"org.webosports.luna",
 				"org.webosports.*",
-				"com.palm.*"
+				"com.palm.*",
+				"com.webos.surfacemanager-cardshell"
 			]
 		},
 		{
@@ -30,7 +31,8 @@
 				"com.webos.monitor*",
 				"org.webosports.luna",
 				"org.webosports.*",
-				"com.palm.*"
+				"com.palm.*",
+				"com.webos.surfacemanager-cardshell"
 			]
 		}
 	]
