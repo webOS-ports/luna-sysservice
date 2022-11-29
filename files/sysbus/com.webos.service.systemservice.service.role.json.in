@@ -2,7 +2,7 @@
 	"exeName":"@WEBOS_INSTALL_SBINDIR@/LunaSysService",
         "trustLevel" : "oem",
 	"type": "regular",
-	"allowedNames": ["com.webos.service.systemservice"],
+	"allowedNames": ["com.webos.service.systemservice", "com.webos.service.image"],
 	"permissions": [
 		{
 			"service":"com.webos.service.systemservice",
@@ -12,6 +12,12 @@
 				"com.webos.service.telephony",
 				"com.webos.service.alarm",
 				"com.webos.service.applicationManager"
+			]
+		},
+		{
+			"service":"com.webos.service.image",
+			"outbound":[
+				"com.palm.*"
 			]
 		}
 	]
