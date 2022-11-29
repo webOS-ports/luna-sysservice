@@ -40,5 +40,10 @@
         "com.webos.service.systemservice/time/getCurrentTimeZoneByLocale",
         "com.webos.service.systemservice/timezone/getTimeZoneFromEasData",
         "com.webos.service.systemservice/timezone/getTimeZoneRules"
+  ],
+  "image.management": [
+        "com.webos.service.image/convert",
+        "com.webos.service.image/imageInfo",
+        "com.webos.service.image/resize"
   ]
 }

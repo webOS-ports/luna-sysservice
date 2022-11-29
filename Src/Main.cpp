@@ -27,6 +27,7 @@
 
 #include "SystemRestore.h"
 #include "Mainloop.h"
+#include "ImageServices.h"
 #include "TimeZoneService.h"
 #include "OsInfoService.h"
 #include "DeviceInfoService.h"
@@ -260,6 +261,13 @@ int main(int argc, char ** argv)
 	// Clock handler
 	ClockHandler clockHandler;
 	setupClockHandler(clockHandler, serviceHandle);
+
+	//init the image service
+	ImageServices *imgSvc = ImageServices::instance();
+	imgSvc->init(g_mainloop.get());
+	if (!imgSvc) {
+		qCritical() << "Image service failed init!";
+	}
 
 	//init the timezone service;
 	TimeZoneService* time_zone_srv = TimeZoneService::instance();
