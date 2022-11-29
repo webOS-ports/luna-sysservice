@@ -22,7 +22,7 @@
         "com.webos.service.systemservice/clock/setTime",
         "com.webos.service.systemservice/time/convertDate",
         "com.webos.service.systemservice/time/launchTimeChangeApps",
-	"com.webos.service.systemservice/time/setBroadcastTime",
+        "com.webos.service.systemservice/time/setBroadcastTime",
         "com.webos.service.systemservice/time/setSystemNetworkTime",
         "com.webos.service.systemservice/time/setSystemTime",
         "com.webos.service.systemservice/time/setTimeChangeLaunch",
