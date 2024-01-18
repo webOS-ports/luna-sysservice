@@ -4,5 +4,6 @@
     "systemsettings.query" : ["oem"],
     "software.query" : ["dev"],
     "time.management" : ["oem"],
-    "time.query" : ["dev"]
+    "time.query" : ["dev"],
+    "image.management" : ["dev"]
 }
