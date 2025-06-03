@@ -870,9 +870,9 @@ JValue TimePrefsHandler::timeZoneListAsJson(const std::string& countryCode, cons
 			break;
 		}
 
-		JValue mmcInfoObj = TimePrefsHandler::s_timeZonesJson["mmcInfo"];
-		if (!mmcInfoObj.isObject()) {
-			PmLogWarning(sysServiceLogContext(), "PARSE_FAILED", 0, "Failed to parse mmcInfo details");
+		JValue mccInfoObj = TimePrefsHandler::s_timeZonesJson["mccInfo"];
+		if (!mccInfoObj.isObject()) {
+			PmLogWarning(sysServiceLogContext(), "PARSE_FAILED", 0, "Failed to parse mccInfo details");
 			break;
 		}
 
@@ -912,7 +912,7 @@ JValue TimePrefsHandler::timeZoneListAsJson(const std::string& countryCode, cons
 		timeZonesListObj.put("timeZone", timeZoneArray);
 		if (countryCode.empty()) {
 			timeZonesListObj.put("syszones", sysZones);
-			timeZonesListObj.put("mmcInfo", mmcInfoObj);
+			timeZonesListObj.put("mccInfo", mccInfoObj);
 		}
 
 		if (!timeZonesListObj.isNull()) {
