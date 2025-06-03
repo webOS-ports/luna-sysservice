@@ -21,7 +21,6 @@
 #define QUARTER_DECIMATION_THRESHOLD_H 3000
 #define EIGHTH_DECIMATION_THRESHOLD_H  4500
 
-#ifdef WEBOS_QT
 bool readImageWithPrescale(QImageReader& reader, QImage& image, double& prescaleFactor)
 {
 	// used to scale the file before it is actually read to memory
@@ -41,4 +40,3 @@ bool readImageWithPrescale(QImageReader& reader, QImage& image, double& prescale
 
 	return reader.read(&image);
 }
-#endif //WEBOS_QT
