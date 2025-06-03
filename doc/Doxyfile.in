@@ -648,7 +648,9 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT                  = ../Src/RingtonePrefsHandler.cpp \
+INPUT                  = ../Src/ImageServices.cpp \
+                         ../Src/RingtonePrefsHandler.cpp \
+						 ../Src/WallpaperPrefsHandler.cpp \
                          ../Src/BackupManager.cpp \
                          ../Src/TimePrefsHandler.cpp \
                          ../Src/TimeZoneService.cpp \

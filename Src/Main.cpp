@@ -266,7 +266,7 @@ int main(int argc, char ** argv)
 	ImageServices *imgSvc = ImageServices::instance();
 	imgSvc->init(g_mainloop.get());
 	if (!imgSvc) {
-		qCritical() << "Image service failed init!";
+		PmLogCritical(sysServiceLogContext(), "FAILED_TO_INIT_IMAGE_SERVICE", 0, "Image service failed init!");
 	}
 
 	//init the timezone service;

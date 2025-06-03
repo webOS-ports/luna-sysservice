@@ -14,10 +14,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifdef WEBOS_QT
 #include <QtGui/QImageReader>
 #include <QtGui/QImage>
 
 bool readImageWithPrescale(QImageReader& reader, QImage& image, double& prescaleFactor);
-#endif //WEBOS_QT
+
 
