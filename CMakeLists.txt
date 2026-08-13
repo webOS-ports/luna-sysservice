@@ -141,7 +141,7 @@ target_link_libraries(LunaSysService
                       )
 
 if (Qt6_FOUND)
-    target_link_libraries(LunaSysService PRIVATE Qt::Core Qt::Gui)
+    target_link_libraries(LunaSysService Qt::Core Qt::Gui)
 endif()
 
 webos_build_system_bus_files()
