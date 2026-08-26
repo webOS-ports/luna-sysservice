@@ -6,6 +6,7 @@
 	"permissions": [
 		{
 			"service":"com.webos.service.systemservice",
+			"inbound":["*"],
 			"outbound":[
 				"com.webos.service.connectionmanager",
 				"com.webos.service.settingsservice",

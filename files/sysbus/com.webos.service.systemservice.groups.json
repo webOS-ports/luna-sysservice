@@ -1,7 +1,7 @@
 {
     "allowedNames" : ["com.webos.service.systemservice"],
     "systemsettings.management" : ["oem"],
-    "systemsettings.query" : ["oem"],
+    "systemsettings.query" : ["oem", "dev"],
     "software.query" : ["dev"],
     "time.management" : ["oem"],
     "time.query" : ["dev"],

@@ -2,5 +2,8 @@
 	"com.webos.service.systemservice":[
 		 "settings.query", "application.launcher", "systemsettings.management",
 		 "networkconnection.query", "telephony.management", "telephony.query"
+	],
+	"com.webos.surfacemanager-cardshell":[
+		 "systemsettings.query"
 	]
 }
