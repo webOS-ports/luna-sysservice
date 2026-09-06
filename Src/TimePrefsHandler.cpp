@@ -240,7 +240,11 @@ public:
 			timeZoneInfo->country = label.asString();
 		}
 
-		label = root["supportDST"];
+		label = root["supportsDST"];
+		if (!label.isNumber()) {
+			//accept data produced by builds that carried the supportDST typo
+			label = root["supportDST"];
+		}
 		if (label.isNumber()) {
 			timeZoneInfo->dstSupported = label.asNumber<int>();
 		}
@@ -284,7 +288,7 @@ public:
 			timeZoneObj.put("Country", timeZoneInfo->country);
 		}
 
-		timeZoneObj.put("supportDST", timeZoneInfo->dstSupported);
+		timeZoneObj.put("supportsDST", timeZoneInfo->dstSupported);
 		timeZoneObj.put("offsetFromUTC", timeZoneInfo->offsetToUTC);
 
 		if (!timeZoneInfo->name.empty()) {
