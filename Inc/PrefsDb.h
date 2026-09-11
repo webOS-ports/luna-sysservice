@@ -49,10 +49,8 @@ public:
 
 	int copyKeys(PrefsDb * p_sourceDb,const std::list<std::string>& keys,bool overwriteSame=true);
 
-	std::string databaseFile() const
+	const std::string& databaseFile() const
 	{ return m_dbFilename; }
-
-	void setDatabaseFileDeleteOnDestruction(bool deleteAtDestructor=true);
 
 	//keeping all this in one place so that all of system service has one place to look it up in, rather than all over the other source files
 	static const char* s_defaultPrefsFile;
@@ -68,7 +66,6 @@ public:
 	static const char* s_mediaPartitionWallpaperThumbsDir;
 	static const char* s_mediaPartitionRingtonesDir;
 	static const char* s_mediaPartitionTempDir;
-	static const char* s_ringtonesDir;
 	static const char* s_sysserviceDir;
 	static const char* s_systemTokenFileAndPath;
 	static const char* s_volumeIconFile;

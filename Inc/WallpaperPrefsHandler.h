@@ -27,17 +27,17 @@ private:
         void init();
 public:
 
-	WallpaperPrefsHandler(LSHandle* serviceHandle);
-	virtual ~WallpaperPrefsHandler();
+	explicit WallpaperPrefsHandler(LSHandle* serviceHandle);
+	~WallpaperPrefsHandler() override;
 
-	virtual std::list<std::string> keys() const;
-	virtual bool validate(const std::string& key, const pbnjson::JValue &value);
-	virtual void valueChanged(const std::string& key, const pbnjson::JValue &value);
-	virtual bool validate(const std::string& key, const pbnjson::JValue &value, const std::string& originId);
-	virtual pbnjson::JValue valuesForKey(const std::string& key);
+	std::list<std::string> keys() const override;
+	bool validate(const std::string& key, const pbnjson::JValue &value) override;
+	void valueChanged(const std::string& key, const pbnjson::JValue &value) override;
+	bool validate(const std::string& key, const pbnjson::JValue &value, const std::string& originId) override;
+	pbnjson::JValue valuesForKey(const std::string& key) override;
 
-	virtual bool isPrefConsistent();
-	virtual void restoreToDefault();
+	bool isPrefConsistent() override;
+	void restoreToDefault() override;
 
 	bool importWallpaperViaImage2(const std::string& imageSourceUrl, double centerX,
 								  double centerY, double scaleFactor,

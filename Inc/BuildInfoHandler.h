@@ -29,13 +29,13 @@ class BuildInfoHandler : public PrefsHandler
 {
 public:
 
-	BuildInfoHandler(LSHandle* serviceHandle);
-	virtual ~BuildInfoHandler();
+	explicit BuildInfoHandler(LSHandle* serviceHandle);
+	~BuildInfoHandler() override;
 
-	virtual std::list<std::string> keys() const;
-	virtual bool validate(const std::string& key, const pbnjson::JValue &value);
-	virtual void valueChanged(const std::string& key, const pbnjson::JValue &value);
-	virtual pbnjson::JValue valuesForKey(const std::string& key);
+	std::list<std::string> keys() const override;
+	bool validate(const std::string& key, const pbnjson::JValue &value) override;
+	void valueChanged(const std::string& key, const pbnjson::JValue &value) override;
+	pbnjson::JValue valuesForKey(const std::string& key) override;
 
 private:
 

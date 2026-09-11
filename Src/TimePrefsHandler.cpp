@@ -4895,9 +4895,15 @@ void TimePrefsHandler::handleNotAvailableSource(const std::string& source)
 
 int TimePrefsHandler::enableNetworkTimeSync(bool enable)
 {
-        std::string useNetworkTime = enable ? "true" : "false";
+        gchar* argv[] = {(gchar*) "timedatectl", (gchar*) "set-ntp",
+                         (gchar*) (enable ? "true" : "false"), NULL};
+        gint status = 0;
 
-        std::string command = "timedatectl set-ntp " + useNetworkTime;
+        // no shell needed for a fixed argv, and the result is meaningful
+        if (!g_spawn_sync(NULL, argv, NULL,
+                          (GSpawnFlags)(G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL),
+                          NULL, NULL, NULL, NULL, &status, NULL))
+                return -1;
 
-        return(system(command.c_str()));
+        return g_spawn_check_wait_status(status, NULL) ? 0 : -1;
 }

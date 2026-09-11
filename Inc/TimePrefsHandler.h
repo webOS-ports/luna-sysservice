@@ -75,14 +75,14 @@ public:
 
     typedef std::vector<std::string> TimeSources;
 
-    TimePrefsHandler(LSHandle* serviceHandle);
+    explicit TimePrefsHandler(LSHandle* serviceHandle);
     TimePrefsHandler(const TimePrefsHandler&) = delete;
     TimePrefsHandler& operator=(const TimePrefsHandler&) = delete;
 
-    virtual std::list<std::string> keys() const;
-    virtual bool validate(const std::string& key, const pbnjson::JValue &value);
-    virtual void valueChanged(const std::string& key, const pbnjson::JValue &value);
-    virtual pbnjson::JValue valuesForKey(const std::string& key);
+    std::list<std::string> keys() const override;
+    bool validate(const std::string& key, const pbnjson::JValue &value) override;
+    void valueChanged(const std::string& key, const pbnjson::JValue &value) override;
+    pbnjson::JValue valuesForKey(const std::string& key) override;
 
     static TimePrefsHandler *instance() { return s_inst; }
     static bool cbLocaleHandler(LSHandle*, LSMessage*, void*);
@@ -235,7 +235,7 @@ public:
 
     void updateTimeZoneEnv();
 
-    virtual ~TimePrefsHandler();
+    ~TimePrefsHandler() override;
 
 private:
     void init();
