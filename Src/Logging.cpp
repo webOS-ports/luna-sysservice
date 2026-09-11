@@ -69,33 +69,36 @@ void logInfo(const char* file, int line, const char* func, const char *fmt, ...)
 	va_end(args);
 	va_end(args_copy);
 	//PmLogInfo(sysServiceLogContext(), meta.toLatin1().data(), 1, PMLOGKS("FUNC", func), "%s", data.toUtf8().data());
-	PmLogInfo(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", func), "%s", data);
+	PmLogInfo(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", func), "%s", data.c_str());
 }
 
 #ifdef WEBOS_QT
 void outputQtMessages(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
+	// file/function can be null in release builds
+	const char *function = context.function ? context.function : "";
 	//QString meta = QString("%1#%2").arg(QFileInfo(context.file).baseName()).arg(context.line);
-	std::string meta = std::string(context.file) + std::string("#") + std::to_string(context.line);
+	std::string meta = std::string(context.file ? context.file : "") + std::string("#") + std::to_string(context.line);
+	const QByteArray text = msg.toUtf8();
 
 	switch (type) {
 		case QtDebugMsg:
 #ifndef NO_LOGGING
-			PmLogDebug(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", context.function),
-					   "%s", msg);
+			PmLogDebug(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", function),
+					   "%s", text.constData());
 #endif
 			break;
 		case QtWarningMsg:
-			PmLogWarning(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", context.function),
-						 "%s", msg);
+			PmLogWarning(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", function),
+						 "%s", text.constData());
 			break;
 		case QtCriticalMsg:
-			PmLogError(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", context.function),
-					   "%s", msg);
+			PmLogError(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", function),
+					   "%s", text.constData());
 			break;
 		case QtFatalMsg:
-			PmLogCritical(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", context.function),
-						  "%s", msg);
+			PmLogCritical(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", function),
+						  "%s", text.constData());
 			abort();
 	}
 }
