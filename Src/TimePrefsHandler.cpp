@@ -323,7 +323,7 @@ private:
 ///just a simple container
 struct PreferredZones
 {
-	PreferredZones() : dstPref(NULL), nonDstPref(NULL), dstFallback(NULL), nonDstFallback(NULL) {}
+	PreferredZones() : offset(0), dstPref(NULL), nonDstPref(NULL), dstFallback(NULL), nonDstFallback(NULL) {}
 
 	/* PreferredZones(const PreferredZones& c) = default; */
 

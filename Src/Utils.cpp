@@ -339,8 +339,7 @@ unsigned int getRNG_UInt()
 	FILE * fp = fopen("/dev/urandom","rb");
 	if (fp == NULL) {
 		//can't open RNG. Use a much less random method
-		srand(time(NULL));
-		return rand();
+		return g_random_int();
 	}
 
 	unsigned int r=0;

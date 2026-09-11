@@ -930,7 +930,6 @@ const std::list<std::string>& WallpaperPrefsHandler::buildIndexFromExisting(int 
         }
 
         if (entries[i]->d_type == DT_REG) {
-            std::string p = path + entries[i]->d_name;
             //add to the map
             thumbExistenceMap[std::string(entries[i]->d_name)] = ' ';
         }
@@ -1036,8 +1035,6 @@ const std::list<std::string>& WallpaperPrefsHandler::scanForWallpapers(bool rebu
         }
 
         if (entries[i]->d_type == DT_REG) {
-            std::string p = path + entries[i]->d_name;
-
             //add to the map
             thumbExistenceMap[std::string(entries[i]->d_name)] = ' ';
         }
