@@ -40,7 +40,8 @@ public:
 	virtual void restoreToDefault();
 
 	bool importWallpaperViaImage2(const std::string& imageSourceUrl, double centerX,
-								  double centerY, double scaleFactor);
+								  double centerY, double scaleFactor,
+								  std::string& ret_wallpaperName, std::string& errorText);
 
 	bool importWallpaper(std::string& ret_wallpaperName,const std::string& sourcePathAndFile,
 							bool toScreenSize,

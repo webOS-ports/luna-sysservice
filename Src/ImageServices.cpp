@@ -120,7 +120,6 @@ Example response for a failed call:
 bool ImageServices::lsConvertImage(LSHandle* lsHandle, LSMessage* message,void* user_data)
 {
 	std::string errorText;
-	int rc;
 	bool specOn = false;
 
 	// {"src": string, "dest": string, "destType": string, "focusX": number, "focusY": number, "scale": number, "cropW": number, "cropH": number}
@@ -183,7 +182,7 @@ bool ImageServices::lsConvertImage(LSHandle* lsHandle, LSMessage* message,void* 
 
 		label = root["cropW"];
 		if (label.isNumber()) {
-			if (label.asNumber<int32_t>() < 0) {
+			if (label.asNumber<int32_t>() <= 0) {
 				errorText = "'cropW' parameter out of range (must be > 0 )";
 				break;
 			}
@@ -194,7 +193,7 @@ bool ImageServices::lsConvertImage(LSHandle* lsHandle, LSMessage* message,void* 
 
 		label = root["cropH"];
 		if (label.isNumber()) {
-			if (label.asNumber<int32_t>() < 0) {
+			if (label.asNumber<int32_t>() <= 0) {
 				errorText = "'cropH' parameter out of range (must be > 0 )";
 				break;
 			}
@@ -216,8 +215,9 @@ bool ImageServices::lsConvertImage(LSHandle* lsHandle, LSMessage* message,void* 
 
 		 *
 		 */
+		bool converted;
 		if (specOn) {
-			rc = ImageServices::instance()->convertImage(srcfile, destfile, desttype.c_str(),
+			converted = ImageServices::instance()->convertImage(srcfile, destfile, desttype.c_str(),
 														 focusX, focusY,
 														 scale,
 														 cropW, cropH,
@@ -225,8 +225,10 @@ bool ImageServices::lsConvertImage(LSHandle* lsHandle, LSMessage* message,void* 
 		}
 		else {
 			// the "just transcode" version of convert is called
-			rc = ImageServices::instance()->convertImage(srcfile, destfile, desttype.c_str(), errorText);
+			converted = ImageServices::instance()->convertImage(srcfile, destfile, desttype.c_str(), errorText);
 		}
+		if (!converted && errorText.empty())
+			errorText = "failed to convert image";
 	} while (false);
 
 	JObject reply {{"subscribed", false}};
@@ -449,8 +451,15 @@ bool ImageServices::lsImageInfo(LSHandle* lsHandle, LSMessage* message,void* use
 	QImageReader reader(QString::fromStdString(srcfile));
 
 	if(reader.canRead()) {
-		srcWidth = reader.size().width();
-		srcHeight = reader.size().height();
+		QSize size = reader.size();
+		if (!size.isValid()) {
+			// format can't report the size without decoding - decode
+			QImage image;
+			if (reader.read(&image))
+				size = image.size();
+		}
+		srcWidth = size.width();
+		srcHeight = size.height();
 		// QImageReader probably won't return all of these, but just to make sure we cover all cases
 		switch(reader.imageFormat()) {
 		case QImage::Format_ARGB32_Premultiplied:
@@ -567,12 +576,13 @@ bool ImageServices::ezResize(const std::string& pathToSourceFile,
 	}
 	// cropped rescale, see http://qt-project.org/doc/qt-4.8/qt.html#AspectRatioMode-enum
 
-	QImage result(widthFinal, heightFinal, image.format());
+	QImage result(widthFinal, heightFinal, QImage::Format_ARGB32_Premultiplied);
 
 	if(result.isNull()) {
 		r_errorText = "ezResize: unable to allocate memory for QImage";
 		return false;
 	}
+	result.fill(Qt::black);
 
 	QPainter p(&result);
 	p.setRenderHint(QPainter::SmoothPixmapTransform);
@@ -628,15 +638,29 @@ bool ImageServices::convertImage(const std::string& pathToSourceFile,
 	scale /= prescale;
 	qDebug("scale after prescale adjustment: %f, prescale: %f", scale, prescale);
 
-	QImage dest(widthFinal, heightFinal, image.format());
+	// crop dimensions are optional - default to the scaled source size
+	if (widthFinal == 0)
+		widthFinal = (uint32_t) qMax(1, qRound(image.width() * scale));
+	if (heightFinal == 0)
+		heightFinal = (uint32_t) qMax(1, qRound(image.height() * scale));
+
+	QImage dest(widthFinal, heightFinal, QImage::Format_ARGB32_Premultiplied);
+	if (dest.isNull()) {
+		r_errorText = "convertImage: unable to allocate memory for QImage";
+		return false;
+	}
+	dest.fill(Qt::black);
 	QPainter p (&dest);
-	p.translate(heightFinal/2, widthFinal/2);
+	p.translate(widthFinal/2.0, heightFinal/2.0);
 	p.translate(-focusX * image.width(), -focusY * image.height());
 	p.scale(scale, scale);
 	p.drawImage(QPoint(0,0), image);
 	p.end();
 
-	dest.save(QString::fromStdString(pathToDestFile), destType, 100);
+	if (!dest.save(QString::fromStdString(pathToDestFile), destType, 100)) {
+		r_errorText = "convertImage: failed to save destination file";
+		return false;
+	}
 	return true;
 
 }
@@ -660,6 +684,9 @@ bool ImageServices::convertImage(const std::string& pathToSourceFile,
 		return false;
 	}
 
-	image.save(QString::fromStdString(pathToDestFile), destType, 100);
+	if (!image.save(QString::fromStdString(pathToDestFile), destType, 100)) {
+		r_errorText = "convertImage: failed to save destination file";
+		return false;
+	}
 	return true;
 }

@@ -14,6 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <cmath>
+
 #include "ImageHelpers.h"
 #include "Logging.h"
 
@@ -34,7 +36,7 @@ bool readImageWithPrescale(QImageReader& reader, QImage& image, double& prescale
 	else if(height > HALF_DECIMATION_THRESHOLD_H)
 		prescaleFactor = 0.5;
 
-	if(!(abs(prescaleFactor - 1.0) < 0.1))
+	if(!(std::fabs(prescaleFactor - 1.0) < 0.1))
 		reader.setScaledSize(QSize(reader.size().width() * prescaleFactor, reader.size().height() * prescaleFactor));
 	PmLogDebug(sysServiceLogContext(), "prescale: %f", prescaleFactor);
 
