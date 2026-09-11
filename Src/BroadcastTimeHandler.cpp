@@ -219,7 +219,7 @@ namespace {
 			}
 		}
 
-		if (local == (time_t)-1) // invalid time
+		if (local == (time_t)-1 || adjustedUtc == (time_t)-1) // invalid time
 		{
 			answer.put("errorCode", int32_t(-1));
 			answer.put("errorText", "Failed to get localtime");
@@ -272,7 +272,12 @@ bool TimePrefsHandler::cbSetBroadcastTime(LSHandle* handle, LSMessage *message,
 	time_t utcOffset = utc - utcCurrent;
 
 	// assume that broadcast local time is correct and allow user to set wrong time-zone
-	time_t adjustedUtcOffset = toUtc(local) - time(0);
+	time_t adjustedUtc = toUtc(local);
+	if (adjustedUtc == (time_t)-1)
+	{
+		return reply(handle, message, createJsonReply(false, -2, "Failed to convert broadcast local time"));
+	}
+	time_t adjustedUtcOffset = adjustedUtc - time(0);
 
 	PmLogInfo(sysServiceLogContext(), "SET_BROADCAST_TIME", 3,
 		PMLOGKS("SENDER", LSMessageGetSenderServiceName(message)),

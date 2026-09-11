@@ -87,9 +87,6 @@ namespace {
 JValue TimePrefsHandler::s_timeZonesJson {};
 TimePrefsHandler * TimePrefsHandler::s_inst = NULL;
 
-extern char *strptime (__const char *__restrict __s,
-			   __const char *__restrict __fmt, struct tm *__tp);
-
 namespace {
 	bool convert(const JValue &value, time_t &timeValue)
 	{
@@ -361,10 +358,10 @@ NitzParameters::NitzParameters(struct tm& timeStruct,int offset,int dst,int mcc,
 	, _timevalid(timevalid)
 	, _tzvalid(tzvalid)
 	, _dstvalid(dstvalid)
-	, _localtimeStamp(remotetimeStamp)
+	, _localtimeStamp(time(NULL))
 {
+	(void) remotetimeStamp; // stamped with the local receipt time instead
 	memcpy(&_timeStruct,&timeStruct,sizeof(timeStruct));
-	_localtimeStamp = time(NULL);
 }
 
 void NitzParameters::stampTime()
@@ -522,8 +519,8 @@ TimePrefsHandler::TimePrefsHandler(LSHandle* serviceHandle)
 	, m_nextTzTrans(-1)
 	, m_micomAvailable(true)
 	, m_altFactorySrcPriority(0)
-	, m_altFactorySrcLastUpdate(0)
 	, m_altFactorySrcSystemOffset(0)
+	, m_altFactorySrcLastUpdate(0)
 	, m_altFactorySrcValid(false)
 {
 	if (!s_inst)
@@ -557,6 +554,13 @@ TimePrefsHandler::~TimePrefsHandler()
                 *it = nullptr;
 	}
         m_syszoneList.clear();
+
+	for (std::map<int,TimeZoneInfo*>::iterator mit = m_mccZoneInfoMap.begin();
+		 mit != m_mccZoneInfoMap.end(); ++mit)
+	{
+		delete mit->second;
+	}
+	m_mccZoneInfoMap.clear();
 }
 
 std::list<std::string> TimePrefsHandler::keys() const
@@ -1687,6 +1691,9 @@ void TimePrefsHandler::scanTimeZoneJson()
 			tz->name = "";
 			tz->jsonStringValue = "";
 		}
+		std::map<int,TimeZoneInfo*>::iterator existing = m_mccZoneInfoMap.find(mcc);
+		if (existing != m_mccZoneInfoMap.end())
+			delete existing->second;
 		m_mccZoneInfoMap[mcc] = tz;
 
 	}
@@ -1994,12 +2001,9 @@ void TimePrefsHandler::launchAppsOnTimeChange()
 		std::string appId = label.asString();
 
 		label = key["parameters"];
-		std::string launchStr;
-		if (label.isValid()) {
-			launchStr = "{ \"id\":\"" + appId + "\", \"params\":" + label.stringify().c_str() + " }";
-		} else {
-			launchStr = "{ \"id\":\"" + appId + "\", \"params\":{} }";
-		}
+		JObject launchObj {{"id", appId}};
+		launchObj.put("params", label.isValid() ? label : JValue(JObject{}));
+		std::string launchStr = launchObj.stringify();
 
 		LS::Error error;
 		(void) LSCall(getServiceHandle(),
@@ -2011,6 +2015,8 @@ void TimePrefsHandler::launchAppsOnTimeChange()
 
 std::string TimePrefsHandler::currentTimeZoneName() const
 {
+	if (!m_cpCurrentTimeZone)
+		return std::string("UTC");
 	return m_cpCurrentTimeZone->name;
 }
 
@@ -3356,6 +3362,9 @@ int	 TimePrefsHandler::timeoutNitzHandlerOffsetValue(NitzParameters& nitz,int& f
 			if (tz->name.empty())
 			{
 				tz = timeZone_ZoneFromOffset(nitz._offset,nitz._dst);
+				//no zone known for this offset either - nothing usable
+				if (!tz)
+					return NITZHANDLER_RETURN_SUCCESS;
 				//check to see that this zone's country doesn't span multiple zones...if it does, then it can't be used,
 				// so exit early
 				//if the name WAS set though, assume that the intent was to override this logic and set it
@@ -4261,6 +4270,11 @@ bool TimePrefsHandler::cbConvertDate(LSHandle* pHandle, LSMessage* pMessage, voi
 
 	JValue root = parser.get();
 
+	// remember the process timezone; the conversion below changes TZ and
+	// every other localtime()/mktime() user in this service depends on it
+	const char* cpSavedTz = getenv("TZ");
+	std::string savedTz = cpSavedTz ? cpSavedTz : "";
+
 	do
 	{
 
@@ -4269,6 +4283,11 @@ bool TimePrefsHandler::cbConvertDate(LSHandle* pHandle, LSMessage* pMessage, voi
 		std::string dest_tz = root["dest_tz"].asString();
 
 		PmLogDebug(sysServiceLogContext(),"%s: converting %s from %s to %s", __func__, date.c_str(), source_tz.c_str(), dest_tz.c_str());
+
+		// strptime only fills the fields it parses; clear the rest and let
+		// mktime figure out whether DST applies
+		memset(&local_tm, 0, sizeof(local_tm));
+		local_tm.tm_isdst = -1;
 
 		bad_char = (char *) strptime(date.c_str(), "%Y-%m-%d %H:%M:%S", &local_tm);
 		if (NULL == bad_char) {
@@ -4289,33 +4308,38 @@ bool TimePrefsHandler::cbConvertDate(LSHandle* pHandle, LSMessage* pMessage, voi
 			break;
 		}
 
+		// interpret the parsed wall-clock time in the source zone...
 		set_tz(source_tz.c_str());
 
 		time_t local_time;
 		local_time = mktime(&local_tm);
-		// ctime adds '\n' to the end of the result, so we need a little workaround
-                char *localtime = ctime(&local_time);
-                std::string str_time = localtime ? localtime : "\n";
-		str_time.pop_back();
-		PmLogDebug(sysServiceLogContext(),"0 date='%s' ctime='%s' local_time=%ld timezone=%ld", date.c_str(), str_time.c_str(),
-			   local_time, timezone);
+		PmLogDebug(sysServiceLogContext(),"0 date='%s' local_time=%lld timezone=%ld", date.c_str(),
+			   (long long) local_time, timezone);
 
-		if (!tz_exists(dest_tz.c_str())) {
-			error_text = g_strdup_printf("timezone not found: '%s'", dest_tz.c_str());
-		}
-
+		// ...and render it in the destination zone
 		set_tz(dest_tz.c_str());
-		PmLogDebug(sysServiceLogContext(),"1 date='%s' ctime='%s' local_time=%ld timezone=%ld", date.c_str(), str_time.c_str(),
-			   local_time, timezone);
 
-		g_assert(error_text.get() == nullptr);
-		status = g_strdup_printf("{\"returnValue\":true,\"date\":\"%s\"}", str_time.c_str());
+		// ctime adds '\n' to the end of the result, so we need a little workaround
+		char *localtime = ctime(&local_time);
+		std::string str_time = localtime ? localtime : "\n";
+		str_time.pop_back();
+		PmLogDebug(sysServiceLogContext(),"1 date='%s' ctime='%s' local_time=%lld timezone=%ld", date.c_str(), str_time.c_str(),
+			   (long long) local_time, timezone);
+
+		const std::string statusStr = JObject {{"returnValue", true}, {"date", str_time}}.stringify();
+		status = g_strdup(statusStr.c_str());
 	}
 	while (false);
 
+	// put the process timezone back the way we found it
+	if (!savedTz.empty())
+		set_tz(savedTz.c_str());
+
 	if (status.get() == nullptr) {
 		g_assert(error_text.get() != nullptr);
-		status = g_strdup_printf("{\"returnValue\":false,\"errorText\":\"%s\"}", error_text.get());
+		const std::string statusStr = JObject {{"returnValue", false},
+											   {"errorText", error_text.get()}}.stringify();
+		status = g_strdup(statusStr.c_str());
 		PmLogWarning(sysServiceLogContext(), "ERROR_MESSAGE", 0, "error: %s", error_text.get());
 	}
 
@@ -4527,7 +4551,6 @@ static void tzsetWorkaround(const char * newTZ) {
 
 	setenv("TZ","",1);
 	tzset();
-	sleep(1);
 	setenv("TZ",newTZ, 1);
 	tzset();
 }
@@ -4729,6 +4752,11 @@ void TimePrefsHandler::clockChanged(const std::string &clockTag, int priority, t
 	// or keep it the same if offset is zero
 	if (systemSetTime(systemOffset, clockTag))
 	{
+		// systemSetTime resets m_lastNtpUpdate; re-stamp it for NTP-sourced
+		// updates so the auto-NTP interval throttle has a reference point
+		if (clockTag == "ntp")
+			m_lastNtpUpdate = currentStamp();
+
 		m_currentTimeSourcePriority = priority;
 		// note that lastUpdate is outdated already so we need to adjust it
 		m_nextSyncTime = lastUpdate + systemOffset + getDriftPeriod(); // when we should sync our time again
