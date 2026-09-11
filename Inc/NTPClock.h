@@ -38,13 +38,20 @@ struct NTPClock
 {
 	TimePrefsHandler &timePrefsHandler;
 
-	NTPClock(TimePrefsHandler &th) :
+	explicit NTPClock(TimePrefsHandler &th) :
 		timePrefsHandler(th),
-		sntpPid(-1)
+		sntpPid(-1),
+		sntpChannel(nullptr),
+		sntpWatchId(0),
+		sntpChildWatchId(0)
 	{}
 
 	~NTPClock()
 	{
+		// cancel outstanding watches - they hold a raw pointer to this
+		if (sntpChildWatchId) g_source_remove(sntpChildWatchId);
+		if (sntpWatchId) g_source_remove(sntpWatchId);
+		if (sntpChannel) g_io_channel_unref(sntpChannel);
 		if (sntpPid != -1) g_spawn_close_pid(sntpPid);
 	}
 
@@ -57,6 +64,20 @@ struct NTPClock
 	 * stdout contents of "sntp" process
 	 */
 	std::string sntpOutput;
+
+	/**
+	 * stdout channel of the running "sntp" process (owned) and its watch ids
+	 */
+	GIOChannel *sntpChannel;
+	guint sntpWatchId;
+	guint sntpChildWatchId;
+
+	/**
+	 * Read whatever is left in the stdout channel and drop it.
+	 * The child-watch can fire before the last G_IO_IN dispatch, so the
+	 * remaining output has to be pulled in explicitly.
+	 */
+	void drainChannel();
 
 	/**
 	 * Request for NTP time update.
