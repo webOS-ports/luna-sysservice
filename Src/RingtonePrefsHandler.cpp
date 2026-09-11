@@ -209,6 +209,11 @@ static bool cbAddRingtone(LSHandle* lsHandle, LSMessage *message, void *)
 
                 //copy it to the media partition
 
+		// use the filesystem path from the parsed URL so file:// requests
+		// (which the check above explicitly allows) actually work
+		if (urlRep.scheme == "file")
+			srcFileName = urlRep.path;
+
 		Utils::splitFileAndPath(srcFileName, pathPart, filePart);
 
 		if (filePart.length() == 0) {
