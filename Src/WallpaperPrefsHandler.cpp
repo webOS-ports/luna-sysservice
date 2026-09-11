@@ -209,11 +209,11 @@ void WallpaperPrefsHandler::init()
     s_wallpaperThumbsDir = std::string(PrefsDb::s_mediaPartitionPath) + std::string(PrefsDb::s_mediaPartitionWallpaperThumbsDir);
 
     //make sure the wallpaper directories exist
-    int exit_status = g_mkdir_with_parents(s_wallpaperDir.c_str(),0766);
+    int exit_status = g_mkdir_with_parents(s_wallpaperDir.c_str(),0755);
     if (exit_status < 0) {
         qWarning("can't seem to create the wallpaper dir (currently [%s])",s_wallpaperDir.c_str());
     }
-    exit_status = g_mkdir_with_parents(s_wallpaperThumbsDir.c_str(),0766);
+    exit_status = g_mkdir_with_parents(s_wallpaperThumbsDir.c_str(),0755);
     if (exit_status < 0) {
         qWarning("can't seem to create the wallpaper thumbs dir (currently [%s])",s_wallpaperThumbsDir.c_str());
     }
@@ -698,6 +698,13 @@ bool WallpaperPrefsHandler::convertImage(const std::string& pathToSourceFile,
 }
 
 bool WallpaperPrefsHandler::deleteWallpaper(std::string wallpaperName) {
+    //the name must be a plain file name inside the wallpaper dir; reject
+    //anything that could escape it (path separators, traversal)
+    if (wallpaperName.empty()
+        || (wallpaperName.find('/') != std::string::npos)
+        || (wallpaperName.find("..") != std::string::npos))
+        return false;
+
     //does it exist in the wallpaper dir?
     std::string destPathAndFile = s_wallpaperDir + std::string("/")+wallpaperName;
     std::string destThumbPathAndFile = s_wallpaperThumbsDir +  std::string("/")+wallpaperName;
@@ -1347,17 +1354,12 @@ static bool cbImportWallpaper(LSHandle* lsHandle, LSMessage *message,
 
 bool isValidOverridePath(const std::string& path) {
 
-    int isValid=false;
 //do not allow /../ in the path. This will avoid complicated parsing to check for valid paths
     if (path.find("..") != std::string::npos)
-       isValid=false;
+       return false;
 
     //mkdir -p the path requested just in case
-    if(g_mkdir_with_parents(path.c_str(), 0755) == 0)
-       isValid=true;
-    else
-       isValid=false;
-    return isValid;
+    return (g_mkdir_with_parents(path.c_str(), 0755) == 0);
 }
 /*!
 \page com_palm_systemservice_wallpaper

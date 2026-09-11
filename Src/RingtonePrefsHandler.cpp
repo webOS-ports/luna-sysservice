@@ -331,6 +331,14 @@ static bool cbDeleteRingtone(LSHandle* lsHandle, LSMessage *message, void *user_
 			break;
 		}
 
+		if ((pathPart != ringtonePartition)
+			|| (filePart.find("..") != std::string::npos)) {
+			errorText = std::string("file is not in the ringtone partition");
+			errorCode = 104;
+			success = false;
+			break;
+		}
+
 		//check the file exist on the file system.
                 if (!Utils::doesExistOnFilesystem(srcFileName.c_str())) {
                        errorText = std::string("file doesn't exist");
