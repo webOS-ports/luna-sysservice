@@ -122,7 +122,7 @@ bool getNthSubstring(unsigned int n,std::string& dest,const std::string& str,con
 		n=1;
 
 	std::string::size_type start = std::string::npos;
-	std::string::size_type mark = std::string::npos;
+	std::string::size_type mark = 0;
 	unsigned int i=1;
 	while (1) {
 		//find the start of a non-delim
@@ -136,11 +136,11 @@ bool getNthSubstring(unsigned int n,std::string& dest,const std::string& str,con
 		++i;
 	}
 
-	if (i != n)
+	if (i != n || start == std::string::npos)
 		return false;
 
 	//extract
-	dest = str.substr(start,mark-start);
+	dest = str.substr(start, (mark == std::string::npos) ? std::string::npos : mark-start);
 	return true;
 
 }
@@ -198,23 +198,23 @@ int splitFileAndExtension(const std::string& srcFileAndExt,std::string& filePart
 
 int splitStringOnKey(std::vector<std::string>& returnSplitSubstrings,const std::string& baseStr,const std::string& delims) {
 
-	std::string base = trimWhitespace(baseStr);
+	const std::string base = trimWhitespace(baseStr);
 	std::string::size_type start = 0;
 	std::string::size_type mark = 0;
 	std::string extracted;
 
 	int i=0;
-	while (start < baseStr.size()) {
+	while (start < base.size()) {
 		//find the start of a non-delims
-		start = baseStr.find_first_not_of(delims,mark);
+		start = base.find_first_not_of(delims,mark);
 		if (start == std::string::npos)
 			break;
 		//find the end of the current substring (where the next instance of delim lives, or end of the string)
-		mark = baseStr.find_first_of(delims,start);
+		mark = base.find_first_of(delims,start);
 		if (mark == std::string::npos)
-			mark = baseStr.size();
+			mark = base.size();
 
-		extracted = baseStr.substr(start,mark-start);
+		extracted = base.substr(start,mark-start);
 		if (extracted.size() > 0) {
 			//valid string...add it
 			returnSplitSubstrings.push_back(extracted);
@@ -239,23 +239,23 @@ void trimWhitespace_inplace(std::string& s_mod,const std::string& drop)
 
 int splitStringOnKey(std::list<std::string>& returnSplitSubstrings,const std::string& baseStr,const std::string& delims) {
 
-	std::string base = trimWhitespace(baseStr);
+	const std::string base = trimWhitespace(baseStr);
 	std::string::size_type start = 0;
 	std::string::size_type mark = 0;
 	std::string extracted;
 
 	int i=0;
-	while (start < baseStr.size()) {
+	while (start < base.size()) {
 		//find the start of a non-delims
-		start = baseStr.find_first_not_of(delims,mark);
+		start = base.find_first_not_of(delims,mark);
 		if (start == std::string::npos)
 			break;
 		//find the end of the current substring (where the next instance of delim lives, or end of the string)
-		mark = baseStr.find_first_of(delims,start);
+		mark = base.find_first_of(delims,start);
 		if (mark == std::string::npos)
-			mark = baseStr.size();
+			mark = base.size();
 
-		extracted = baseStr.substr(start,mark-start);
+		extracted = base.substr(start,mark-start);
 		if (extracted.size() > 0) {
 			//valid string...add it
 			returnSplitSubstrings.push_back(extracted);
@@ -285,13 +285,14 @@ int fileCopy(const char * srcFileAndPath,const char * dstFileAndPath)
 	if ((srcFileAndPath == NULL) || (dstFileAndPath == NULL))
 		return -1;
 
+	// open the source first: opening the destination "wb" truncates it, which
+	// must not happen when the source turns out to be missing
 	FILE * infp = fopen(srcFileAndPath,"rb");
+	if (infp == NULL)
+		return -1;
 	FILE * outfp = fopen(dstFileAndPath,"wb");
-	if ((infp == NULL) || (outfp == NULL)) {
-		if (infp)
-			fclose(infp);
-		if (outfp)
-			fclose(outfp);
+	if (outfp == NULL) {
+		fclose(infp);
 		return -1;
 	}
 
@@ -316,7 +317,7 @@ int fileCopy(const char * srcFileAndPath,const char * dstFileAndPath)
 	fclose(outfp);
 	if (!success) // incomplete copy
 	{
-		// XXX: (void) unlink(dstFileAndPath);
+		(void) unlink(dstFileAndPath);
 		return -1;
 	}
 	return 1;
@@ -343,12 +344,12 @@ unsigned int getRNG_UInt()
 	}
 
 	unsigned int r=0;
-	int nr=0;
-	do {
-		nr = fread(&r,1, sizeof(r), fp);
-	} while (nr != sizeof(r));
-
+	size_t nr = fread(&r, 1, sizeof(r), fp);
 	fclose(fp);
+	if (nr != sizeof(r)) {
+		// reading urandom failed; fall back to a weaker source
+		return g_random_int();
+	}
 	return r;
 }
 
@@ -527,33 +528,28 @@ std::string & append_format(std::string & str, const char * format, ...)
 		return str;
 	va_list args;
 	va_start(args, format);
+
+	va_list args_copy;
+	va_copy(args_copy, args);
 	char stackBuffer[1024];
-	int result = vsnprintf(stackBuffer, G_N_ELEMENTS(stackBuffer), format, args);
+	int result = vsnprintf(stackBuffer, G_N_ELEMENTS(stackBuffer), format, args_copy);
+	va_end(args_copy);
+
 	if (result > -1 && result < (int) G_N_ELEMENTS(stackBuffer))
 	{   // stack buffer was sufficiently large. Common case with no temporary dynamic buffer.
-		va_end(args);
 		str.append(stackBuffer, result);
-		return str;
+	}
+	else if (result > -1)
+	{
+		int length = result + 1;
+		char * buffer = new char[length];
+		result = vsnprintf(buffer, length, format, args);
+		if (result > 0)
+			str.append(buffer, result);
+		delete[] buffer;
 	}
 
-	int length = result > -1 ? result + 1 : G_N_ELEMENTS(stackBuffer) * 3;
-	char * buffer = 0;
-	do
-	{
-		if (buffer)
-		{
-			delete[] buffer;
-			length *= 3;
-		}
-		buffer = new char[length];
-		result = vsnprintf(buffer, length, format, args);
-	} while (result == -1 && result < length);
 	va_end(args);
-    if (buffer) {
-        if (result > 0)
-            str.append(buffer, result);
-        delete[] buffer;
-    }
 	return str;
 }
 
