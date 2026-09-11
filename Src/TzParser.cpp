@@ -73,7 +73,7 @@ struct ttinfo {
 	int    abbrIndex;
 };
 
-struct ttentry {	
+struct ttentry {
 	time_t time;
 	int    indexToLocalTime;
 };
@@ -85,34 +85,53 @@ typedef std::vector<ttinfo>  ttinfolist;
 static long
 detzcode(const char* codep)
 {
-	register long   result;
-	register int    i;
+	// accumulate in unsigned to avoid shifting a negative value (UB),
+	// then sign-extend from 32 bits
+	uint32_t result = 0;
 
-	result = (codep[0] & 0x80) ? ~0L : 0;
-	for (i = 0; i < 4; ++i)
+	for (int i = 0; i < 4; ++i)
 		result = (result << 8) | (codep[i] & 0xff);
-	return result;
+	return (long) (int32_t) result;
 }
 
 static time_t
 detzcode64(const char* codep)
 {
-	register time_t	result;
-	register int	i;
+	uint64_t result = 0;
 
-	result = (codep[0] & 0x80) ?  (~(int64_t) 0) : 0;
-	for (i = 0; i < 8; ++i)
-		result = result * 256 + (codep[i] & 0xff);
-	return result;
+	for (int i = 0; i < 8; ++i)
+		result = (result << 8) | (codep[i] & 0xff);
+	return (time_t) (int64_t) result;
+}
+
+// A zone name must be a relative path inside the zoneinfo directory:
+// no absolute paths, no ".." components, no hidden/dot entries.
+static bool isValidTzName(const char* tzName)
+{
+	if (!tzName || tzName[0] == '\0')
+		return false;
+	if (tzName[0] == '/' || tzName[0] == '.')
+		return false;
+	if (strstr(tzName, "..") != NULL)
+		return false;
+	if (strstr(tzName, "/.") != NULL)
+		return false;
+	return true;
 }
 
 TzTransitionList parseTimeZone(const char* tzName)
 {
 	static const char* zoneInfoDir = "/usr/share/zoneinfo/";
 	static const char* etcZoneInfoDir = "/usr/share/zoneinfo/Etc/";
+
+	if (!isValidTzName(tzName))
+	{
+		printf("Invalid time zone name\n");
+		return TzTransitionList();
+	}
+
 	std::string filePath = zoneInfoDir;
-    if (tzName)
-        filePath += tzName;
+	filePath += tzName;
 
 	struct stat stBuf;
 	FILE* fp = fopen(filePath.c_str(), "r");
@@ -122,8 +141,7 @@ TzTransitionList parseTimeZone(const char* tzName)
 		printf("Failed to find file: %s\n", filePath.c_str());
 
 		filePath = etcZoneInfoDir;
-        if (tzName)
-            filePath += tzName;
+		filePath += tzName;
 
 		fp = fopen(filePath.c_str(), "r");
 		if (!fp && errno == ENOENT)
@@ -141,8 +159,9 @@ TzTransitionList parseTimeZone(const char* tzName)
 			return TzTransitionList();
 		}
 
-		if (stBuf.st_size <= (int) sizeof(tzhead)) {
-			printf("file too short to be a tz file: %s\n", filePath.c_str());
+		if (!S_ISREG(stBuf.st_mode)
+			|| stBuf.st_size <= (int) sizeof(tzhead)) {
+			printf("not a regular file or too short to be a tz file: %s\n", filePath.c_str());
 			fclose(fp);
 			return TzTransitionList();
 		}
@@ -206,19 +225,23 @@ TzTransitionList parseTimeZone(const char* tzName)
 	long gmtCnt = 0;
 	long stdCnt = 0;
 
-	(void) leapCnt;
-	(void) timeCnt;
-	(void) typeCnt;
-	(void) charCnt;
-	(void) gmtCnt;
-	(void) stdCnt;
+	long index = 0;
+	const long fileSize = (long) stBuf.st_size;
+	bool parsedOneBlock = false;
 
-	int index = 0;
 	for (int stored = 4; stored <= 8; stored *= 2) {
 
 		DBG("-----------------------------------------------------\n");
 
-		if (memcmp(buf, TZ_MAGIC, 4) != 0) {
+		// each data block starts with its own header; validate the block
+		// completely against the file size before touching the lists so a
+		// truncated or corrupt (second) block cannot read out of bounds
+		if (fileSize - index < (long) sizeof(struct tzhead)
+			|| memcmp(buf + index, TZ_MAGIC, 4) != 0) {
+			if (parsedOneBlock) {
+				// keep the 32-bit data we already have
+				break;
+			}
 			printf("Not a tz file. Header signature mismatch: %s\n", filePath.c_str());
 			free(buf);
 			return TzTransitionList();
@@ -226,18 +249,59 @@ TzTransitionList parseTimeZone(const char* tzName)
 
 		struct tzhead* head = (struct tzhead*) (buf + index);
 
-		leapCnt = detzcode(head->tzh_leapcnt);
-		timeCnt = detzcode(head->tzh_timecnt);
-		typeCnt = detzcode(head->tzh_typecnt);
-		charCnt = detzcode(head->tzh_charcnt);
-		gmtCnt = detzcode(head->tzh_ttisgmtcnt);
-		stdCnt = detzcode(head->tzh_ttisstdcnt);
+		long blockLeapCnt = detzcode(head->tzh_leapcnt);
+		long blockTimeCnt = detzcode(head->tzh_timecnt);
+		long blockTypeCnt = detzcode(head->tzh_typecnt);
+		long blockCharCnt = detzcode(head->tzh_charcnt);
+		long blockGmtCnt = detzcode(head->tzh_ttisgmtcnt);
+		long blockStdCnt = detzcode(head->tzh_ttisstdcnt);
+
+		long dataSize = -1;
+		if (blockLeapCnt < 0 || blockTimeCnt < 0 || blockTypeCnt < 0
+			|| blockCharCnt < 0 || blockGmtCnt < 0 || blockStdCnt < 0
+			|| blockTypeCnt == 0) {
+			dataSize = -1;
+		}
+		else {
+			// per-count sizes are bounded by the (small) file size, so this
+			// sum cannot overflow long
+			long remaining = fileSize - index - (long) sizeof(struct tzhead);
+			dataSize = blockTimeCnt * (stored + 1)
+					 + blockTypeCnt * 6
+					 + blockCharCnt
+					 + blockLeapCnt * (stored + 4)
+					 + blockStdCnt
+					 + blockGmtCnt;
+			if (blockTimeCnt > remaining / (stored + 1)
+				|| blockTypeCnt > remaining / 6
+				|| blockCharCnt > remaining
+				|| blockLeapCnt > remaining / (stored + 4)
+				|| blockStdCnt > remaining
+				|| blockGmtCnt > remaining
+				|| dataSize > remaining)
+				dataSize = -1;
+		}
+
+		if (dataSize < 0) {
+			if (parsedOneBlock)
+				break;
+			printf("Corrupt tz file (bad counts): %s\n", filePath.c_str());
+			free(buf);
+			return TzTransitionList();
+		}
+
+		leapCnt = blockLeapCnt;
+		timeCnt = blockTimeCnt;
+		typeCnt = blockTypeCnt;
+		charCnt = blockCharCnt;
+		gmtCnt = blockGmtCnt;
+		stdCnt = blockStdCnt;
 
 		ttInfoList.clear();
-		ttInfoList.reserve(timeCnt);
+		ttInfoList.reserve(typeCnt);
 
 		ttEntryList.clear();
-		ttEntryList.reserve(typeCnt);
+		ttEntryList.reserve(timeCnt);
 
 		ttAbbrList.clear();
 		ttAbbrList.reserve(charCnt + 1);
@@ -378,6 +442,8 @@ TzTransitionList parseTimeZone(const char* tzName)
 			DBG("utcOrLocalTime: %d\n", utcOrLocalTime);
 		}
 
+		parsedOneBlock = true;
+
 		/*
 		  Localtime uses the first standard-time ttinfo structure in the file
 		  (or simply the first ttinfo structure  in  the  absence  of  a
@@ -391,7 +457,7 @@ TzTransitionList parseTimeZone(const char* tzName)
 		 * signed time_t system but using a data file with
 		 * unsigned values (or vice versa).
 		 */
-		for (int i = 0; i < timeCnt - 2; ++i) {
+		for (long i = 0; i < timeCnt - 1; ++i) {
 			if (ttEntryList[i].time > ttEntryList[i+1].time) {
 				++i;
 				if (TYPE_SIGNED(time_t)) {
@@ -399,7 +465,7 @@ TzTransitionList parseTimeZone(const char* tzName)
 					timeCnt = i;
 				} else {
 					// Ignore the beginning (harder).
-					int j;
+					long j;
 					for (j = 0; (j + i) < timeCnt; ++j) {
 						ttEntryList[j] = ttEntryList[j+i];
 					}
@@ -426,7 +492,7 @@ TzTransitionList parseTimeZone(const char* tzName)
 		}
 	}
 
-	DBG("Total Buffer size parsed: %d\n", index);
+	DBG("Total Buffer size parsed: %ld\n", index);
 
 	free(buf);
 
@@ -435,14 +501,17 @@ TzTransitionList parseTimeZone(const char* tzName)
 	if (ttEntryList.empty() && !ttInfoList.empty()) {
 		ttentry e;
 		timeCnt = 1;
-		e.time = -2147483648UL;
+		e.time = (time_t) INT32_MIN;
 		e.indexToLocalTime = 0;
 		ttEntryList.push_back(e);
 	}
 
 	TzTransitionList result;
-	for (int i = 0; i < timeCnt; i++) {
+	for (long i = 0; i < timeCnt; i++) {
 		const ttentry& entry = ttEntryList[i];
+		if (entry.indexToLocalTime < 0
+			|| (size_t) entry.indexToLocalTime >= ttInfoList.size())
+			continue;
 		const ttinfo& info   = ttInfoList[entry.indexToLocalTime];
 		struct tm* gmTime    = gmtime(&entry.time);
 		if (NULL==gmTime) continue;
