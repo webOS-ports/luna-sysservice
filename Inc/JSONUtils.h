@@ -186,14 +186,17 @@ pbnjson::JValue createJsonReply(bool returnValue = true, int errorCode = 0, cons
 template <typename T>
 T toInteger(const pbnjson::JValue &value)
 {
-	// this check will be compiled-out due to static condition
-	if (sizeof(T) <= sizeof(int32_t))
+	// these checks will be compiled-out due to static conditions;
+	// unsigned types must go through the wider parse or values above the
+	// signed maximum would be clamped before the conversion back to T
+	if (sizeof(T) < sizeof(int32_t) ||
+		(sizeof(T) == sizeof(int32_t) && static_cast<T>(-1) < static_cast<T>(0)))
 	{
-		return value.asNumber<int32_t>();
+		return static_cast<T>(value.asNumber<int32_t>());
 	}
 	else
 	{
-		return value.asNumber<int64_t>();
+		return static_cast<T>(value.asNumber<int64_t>());
 	}
 }
 

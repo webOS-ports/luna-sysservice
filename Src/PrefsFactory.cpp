@@ -147,7 +147,14 @@ void PrefsFactory::postPrefChange(const std::string& keyStr,const std::string& v
 
 	LSErrorInit(&lserror);
 
-	std::string reply = std::string("{ \"")+keyStr+std::string("\":")+valueStr+std::string("}");
+	// values are usually stored as serialized JSON, but bare strings (or an
+	// empty value from a failed restore) must still produce a valid payload
+	JValue value = JDomParser::fromString(valueStr);
+	if (!value.isValid())
+		value = JValue(valueStr);
+	JObject replyObj;
+	replyObj.put(keyStr, value);
+	std::string reply = replyObj.stringify();
 
 	bool retVal = LSSubscriptionAcquire(m_serviceHandle, keyStr.c_str(), &iter, &lserror);
 	if (retVal) {
@@ -414,16 +421,16 @@ static bool cbSwInfo(LSHandle *lsHandle, LSMessage *message, void *)
 			return true;
 		JValue root = parser.get();
 		JValue parameters = root["parameters"];
-		for (JValue parameters : parameters.items())
+		for (JValue parameter : parameters.items())
 		{
-			auto query = versions.find(parameters.asString());
+			auto query = versions.find(parameter.asString());
 			if (query == versions.end())
 			{
 				PmLogWarning(sysServiceLogContext(),"INVALID_PARAMETER",0,"reached invalid parameter");
 				response_json =
-					pbnjson::JObject{{"returnValue", false}, {"errorText", "Invalid parameter: " + parameters.stringify()}};
+					pbnjson::JObject{{"returnValue", false}, {"errorText", "Invalid parameter: " + parameter.stringify()}};
 				request.respond(response_json.stringify().c_str());
-				break;
+				return true;
 			}
 		}
 		std::string nodejsversion = exec("node -v");
@@ -438,11 +445,7 @@ static bool cbSwInfo(LSHandle *lsHandle, LSMessage *message, void *)
 			allver.push_back(nodejsversion);
 		}
 		std::string nodejs6version = exec("node6 -v");
-		if (nodejs6version.empty())
-		{
-			nodejs6version = "";
-		}
-		else
+		if (!nodejs6version.empty())
 		{
 			nodejs6version.erase(std::remove(nodejs6version.begin(), nodejs6version.end(), '\n'), nodejs6version.end());
 			allver.push_back(nodejs6version);
@@ -471,8 +474,8 @@ static bool quotesRequired(const std::string& value)
 
 	const char* val_str = value.c_str();
 	char* pEnd;
-	double result = strtod(val_str, &pEnd);
-	if (!(abs(result - 0.0) < 0.1)) {
+	(void) strtod(val_str, &pEnd);
+	if (val_str != pEnd) {
 		isQuotes = false;			// maybe number, will continue check
 		while (*pEnd != '\0') {
 			if (!isspace(*pEnd)) {		// if we have not spaces symbols after number => we have string
@@ -481,9 +484,6 @@ static bool quotesRequired(const std::string& value)
 			}
 			pEnd++;
 		}
-	}
-	else if (val_str != pEnd) {	// check if value == 0.0
-		isQuotes = false;		// number detected
 	}
 
 	if (isQuotes) {

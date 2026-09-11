@@ -152,12 +152,16 @@ bool OsInfoService::cbGetOsInformation(LSHandle* lsHandle, LSMessage *message, v
 {
     JObject reply;
     nyx_device_handle_t device = nullptr;
+    bool nyxInitialized = false;
     reply.put("returnValue", true);
     do {
         auto payload = LSMessageGetPayload(message);
 
-        if (!payload)
+        if (!payload) {
+            reply = JObject { { "returnValue", false }, { "errorText",
+                    "Missing message payload" } };
             break;
+        }
 
         JValue payloadObj = JDomParser::fromString(payload);
         if (!payloadObj.isObject()) {
@@ -188,6 +192,7 @@ bool OsInfoService::cbGetOsInformation(LSHandle* lsHandle, LSMessage *message, v
                     "Internal error. Can't initialize nyx" } };
             break;
         }
+        nyxInitialized = true;
 
         error = nyx_device_open(NYX_DEVICE_OS_INFO, "Main", &device);
         if ((NYX_ERROR_NONE != error) || (NULL == device))
@@ -216,7 +221,7 @@ bool OsInfoService::cbGetOsInformation(LSHandle* lsHandle, LSMessage *message, v
                 break;
             }
 
-            reply.put(param.asString(), nyx_result);
+            reply.put(param.asString(), nyx_result ? nyx_result : "");
         }
     } while (false);
 
@@ -228,7 +233,8 @@ bool OsInfoService::cbGetOsInformation(LSHandle* lsHandle, LSMessage *message, v
 
     if (NULL != device)
         nyx_device_close(device);
-    nyx_deinit();
+    if (nyxInitialized)
+        nyx_deinit();
 
     return true;
 }

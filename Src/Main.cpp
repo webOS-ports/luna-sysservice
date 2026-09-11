@@ -16,7 +16,9 @@
 
 
 #include <glib.h>
+#include <glib-unix.h>
 #include <signal.h>
+#include <string.h>
 
 #include <luna-service2/lunaservice.h>
 #include <luna-service2++/error.hpp>
@@ -157,9 +159,10 @@ main_loop_quit() {
 	g_main_loop_quit(g_mainloop.get());
 }
 
-static void
-signal_handler_quit(int signal) {
+static gboolean
+signal_source_quit(gpointer) {
 	main_loop_quit();
+	return G_SOURCE_REMOVE;
 }
 
 static inline void
@@ -167,7 +170,7 @@ fill_sigaction(struct sigaction *action,
                 void (*handler)(int),
                 sigset_t mask) {
 
-	bzero((void *)action, sizeof(struct sigaction));
+	memset(action, 0, sizeof(struct sigaction));
 	action->sa_handler = handler;
 	action->sa_mask = mask;
 	action->sa_flags = 0;
@@ -179,16 +182,16 @@ init_signals(void) {
 
     sigset_t sigset;
     struct sigaction ignore_action;
-    struct sigaction quit_action;
 
     sigemptyset(&sigset);
 
     fill_sigaction(&ignore_action, SIG_IGN, sigset);
     sigaction(SIGHUP, &ignore_action, (struct sigaction *)NULL);
 
-    fill_sigaction(&quit_action, signal_handler_quit, sigset);
-    sigaction(SIGTERM, &quit_action, (struct sigaction *)NULL);
-    sigaction(SIGINT, &quit_action, (struct sigaction *)NULL);
+    // dispatch quit from the mainloop: g_main_loop_quit() is not
+    // async-signal-safe and could deadlock inside a raw signal handler
+    g_unix_signal_add(SIGTERM, signal_source_quit, NULL);
+    g_unix_signal_add(SIGINT, signal_source_quit, NULL);
 }
 
 
@@ -254,7 +257,8 @@ int main(int argc, char ** argv)
 			R"({"keys":["localeInfo"],"subscribe":true})", TimePrefsHandler::cbLocaleHandler,
 				nullptr, nullptr, error))
 	{
-		PmLogDebug(sysServiceLogContext(),"could not get locale info: %s", error.what());
+		PmLogCritical(sysServiceLogContext(), "LOCALE_SUBSCRIBE_FAILED", 0,
+					  "could not get locale info: %s", error.what());
 		return -1;
 	}
 
@@ -264,8 +268,7 @@ int main(int argc, char ** argv)
 
 	//init the image service
 	ImageServices *imgSvc = ImageServices::instance();
-	imgSvc->init(g_mainloop.get());
-	if (!imgSvc) {
+	if (!imgSvc->init(g_mainloop.get())) {
 		PmLogCritical(sysServiceLogContext(), "FAILED_TO_INIT_IMAGE_SERVICE", 0, "Image service failed init!");
 	}
 

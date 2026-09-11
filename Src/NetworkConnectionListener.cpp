@@ -49,7 +49,8 @@ NetworkConnectionListener::~NetworkConnectionListener()
 
 void NetworkConnectionListener::shutdown()
 {
-	delete NetworkConnectionListener::instance();
+	// don't construct a listener (registering with the bus) just to delete it
+	delete s_instance;
 	s_instance = 0;
 }
 

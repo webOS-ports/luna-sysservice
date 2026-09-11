@@ -168,12 +168,16 @@ bool DeviceInfoService::cbGetDeviceInformation(LSHandle* lsHandle, LSMessage *me
 {
     JObject reply;
     nyx_device_handle_t device = nullptr;
+    bool nyxInitialized = false;
 
     do {
         auto payload = LSMessageGetPayload(message);
 
-        if (!payload)
+        if (!payload) {
+            reply = JObject { { "returnValue", false }, { "errorText",
+                    "Missing message payload" } };
             break;
+        }
 
         JValue payloadObj = JDomParser::fromString(payload);
         if (!payloadObj.isObject()) {
@@ -204,6 +208,7 @@ bool DeviceInfoService::cbGetDeviceInformation(LSHandle* lsHandle, LSMessage *me
                     "Internal error. Can't initialize nyx" } };
             break;
         }
+        nyxInitialized = true;
 
         error = nyx_device_open(NYX_DEVICE_DEVICE_INFO, "Main", &device);
             if ((NYX_ERROR_NONE != error) || (NULL == device))
@@ -214,23 +219,27 @@ bool DeviceInfoService::cbGetDeviceInformation(LSHandle* lsHandle, LSMessage *me
             break;
         }
 
+        bool paramsOk = true;
         for (JValue param : params.items()) {
             auto query = getCommandMap().find(param.asString());
             if (query == getCommandMap().end()) {
                 reply = JObject { { "returnValue", false }, { "errorText",
                         "Invalid parameter: " + param.stringify() } };
+                paramsOk = false;
                 break;
             }
 
             const char *nyx_result = nullptr;
             // Some device don't have all available parameters. We will just ignore them.
             error = nyx_device_info_query(device, query->second, &nyx_result);
-            if (NYX_ERROR_NONE == error) {
+            if (NYX_ERROR_NONE == error && nyx_result) {
                 reply.put(param, nyx_result);
             } else {
                 reply.put(param, "not supported");
             }
         }
+        if (!paramsOk)
+            break;
 
         reply.put("returnValue", true);
     } while (false);
@@ -243,7 +252,8 @@ bool DeviceInfoService::cbGetDeviceInformation(LSHandle* lsHandle, LSMessage *me
 
     if (NULL != device)
         nyx_device_close(device);
-    nyx_deinit();
+    if (nyxInitialized)
+        nyx_deinit();
 
     return true;
 }
