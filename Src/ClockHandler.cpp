@@ -225,6 +225,12 @@ bool ClockHandler::compensateSuspendedTime(time_t offset, const std::string &clo
 	}
 
 	Clock &clock = it->second;
+	if (clock.systemOffset == invalidOffset)
+	{
+		// never updated - there is nothing to compensate, and adding to the
+		// sentinel would turn it into a bogus "valid" offset
+		return false;
+	}
 	clock.lastUpdate = timeStamp;
 	clock.systemOffset += offset;
 
@@ -531,7 +537,7 @@ time_t ClockHandler::evaluateDelay(const timespec& sourceTimeStamp)
 	time_t delay = adjusted.tv_sec - time(0);
 	if ( delay ) {
 		PmLogInfo(sysServiceLogContext(), "CHECK_DELAYED_TIME", 1,
-						PMLOGKFV("Adjusted", "%d", delay),
+						PMLOGKFV("Adjusted", "%lld", (long long) delay),
 						"Delay indicated: from %ld.%ld to %ld.%ld",
 						sourceTimeVal.tv_sec, sourceTimeVal.tv_usec,
 						currentTimeVal.tv_sec, currentTimeVal.tv_usec);
