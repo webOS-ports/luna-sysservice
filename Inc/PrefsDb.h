@@ -74,7 +74,7 @@ public:
 	static const char* s_sysDefaultWallpaperKey;
 	static const char* s_sysDefaultRingtoneKey;
 
-	~PrefsDb();
+	~PrefsDb() override;
 private:
 	PrefsDb();
 	PrefsDb(const std::string& standaloneDbFilename);

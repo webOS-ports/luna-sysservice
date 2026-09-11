@@ -90,7 +90,6 @@ class SlotBase : public SlotRoot
 public:
 
 	virtual void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4) = 0;
-	virtual ~SlotBase() {}
 };
 
 template <>
@@ -99,7 +98,6 @@ class SlotBase<void, void, void, void, void> : public SlotRoot
 public:
 	
 	virtual void fire() = 0;
-	virtual ~SlotBase() {}
 };
 
 template <class Arg0>
@@ -108,7 +106,6 @@ class SlotBase<Arg0, void, void, void, void> : public SlotRoot
 public:
 	
 	virtual void fire(Arg0 arg0) = 0;
-	virtual ~SlotBase() {}
 };
 
 template <class Arg0, class Arg1>
@@ -117,7 +114,6 @@ class SlotBase<Arg0, Arg1, void, void, void> : public SlotRoot
 public:
 	
 	virtual void fire(Arg0 arg0, Arg1 arg1) = 0;
-	virtual ~SlotBase() {}
 };
 
 template <class Arg0, class Arg1, class Arg2>
@@ -126,7 +122,6 @@ class SlotBase<Arg0, Arg1, Arg2, void, void> : public SlotRoot
 public:
 	
 	virtual void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2) = 0;
-	virtual ~SlotBase() {}
 };
 
 template <class Arg0, class Arg1, class Arg2, class Arg3>
@@ -135,7 +130,6 @@ class SlotBase<Arg0, Arg1, Arg2, Arg3, void> : public SlotRoot
 public:
 	
 	virtual void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3) = 0;
-	virtual ~SlotBase() {}
 };
 
 
@@ -323,7 +317,7 @@ public:
 		return this->m_receiver;
 	}
 
-	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3) {
+	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3) override {
 		(static_cast<Receiver*>(this->m_receiver)->*(this->m_function))(arg0, arg1, arg2, arg3);
 	}	
 };
@@ -337,7 +331,7 @@ class SignalBase : public Sender
 {
 public:
 
-	virtual ~SignalBase() {
+	~SignalBase() override {
 		for (typename SlotSet::const_iterator it = this->m_slots.begin();
 			 it != this->m_slots.end(); ++it) {
 			(*it)->slotReceiver()->disconnected(this);
@@ -367,7 +361,7 @@ public:
 		recv->disconnected(this);
 	}
 
-	virtual void disconnectTrackable(Trackable* recv) {
+	void disconnectTrackable(Trackable* recv) override {
 		disconnect(recv);
 	}
 	

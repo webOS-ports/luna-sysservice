@@ -20,6 +20,8 @@
 
 BroadcastTime::BroadcastTime() :
 	m_type(None),
+	m_utcOffset(0),
+	m_localOffset(0),
 	m_stamp(0)
 {}
 
