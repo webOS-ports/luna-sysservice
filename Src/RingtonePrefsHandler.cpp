@@ -209,6 +209,11 @@ static bool cbAddRingtone(LSHandle* lsHandle, LSMessage *message, void *)
 
                 //copy it to the media partition
 
+		// use the filesystem path from the parsed URL so file:// requests
+		// (which the check above explicitly allows) actually work
+		if (urlRep.scheme == "file")
+			srcFileName = urlRep.path;
+
 		Utils::splitFileAndPath(srcFileName, pathPart, filePart);
 
 		if (filePart.length() == 0) {
@@ -327,6 +332,14 @@ static bool cbDeleteRingtone(LSHandle* lsHandle, LSMessage *message, void *user_
 		if (filePart.length() == 0) {
 			errorText = std::string("source file name missing.");
                         errorCode = 101;
+			success = false;
+			break;
+		}
+
+		if ((pathPart != ringtonePartition)
+			|| (filePart.find("..") != std::string::npos)) {
+			errorText = std::string("file is not in the ringtone partition");
+			errorCode = 104;
 			success = false;
 			break;
 		}

@@ -110,7 +110,7 @@ int BuildInfoHandler::readBuildInfoFile(std::map<std::string,std::string>& KVpai
 		++lc;	//count lines...helps debug efforts
 		char *lp = fgets(lineb,2048,fp);
 		if (lp == NULL)
-			continue;
+			break;	// EOF or a persistent read error - continuing would spin forever
 		std::string line(lp);
 		Utils::trimWhitespace_inplace(line);
 		std::list<std::string> splits;

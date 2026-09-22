@@ -50,7 +50,7 @@ private:
 	std::unique_ptr<PrefsDb> m_p_backupDb;
 
 	void copyKeysToBackupDb();
-	void initFilesForBackup(bool filenamesOnly);
+	void initFilesForBackup(bool useFullPath);
 
 	static bool preBackupCallback( LSHandle* lshandle, LSMessage *message, void *user_data);
 	static bool postRestoreCallback( LSHandle* lshandle, LSMessage *message, void *user_data);

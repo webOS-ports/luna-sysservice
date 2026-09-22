@@ -96,13 +96,17 @@ void BackupManager::copyKeysToBackupDb()
 	m_p_backupDb->copyKeys(PrefsDb::instance(), keylist);
 }
 
-void BackupManager::initFilesForBackup(bool useFilenameWithoutPath)
+void BackupManager::initFilesForBackup(bool useFullPath)
 {
+	// rebuild the list from scratch - preBackup can be called repeatedly and
+	// entries must not accumulate across calls
+	m_backupFiles.clear();
+
 	if (m_p_backupDb)
 	{
 		if (g_file_test(m_p_backupDb->databaseFile().c_str(), G_FILE_TEST_EXISTS))
 		{
-			if (useFilenameWithoutPath)
+			if (useFullPath)
 			{
 				m_backupFiles.push_back(m_p_backupDb->m_dbFilename.c_str());
 			}
@@ -366,8 +370,8 @@ bool BackupManager::sendPreBackupResponse(LSHandle* lshandle, LSMessage *message
 	if (m_doBackupFiles)
 	{
 		for (const std::string &file: fileList) {
-			files.append(file)
-			PMLOG_TRACE("added file %s to the backup list", file->c_str());
+			files.append(file);
+			PMLOG_TRACE("added file %s to the backup list", file.c_str());
 		}
 	}
 	else

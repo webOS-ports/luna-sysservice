@@ -260,8 +260,11 @@ int PrefsDb::merge(const std::string& sourceDbFilename,bool overwriteSameKeys)
 	if (overwriteSameKeys)
 	{
 		//can use the ATTACH method
-		std::string attachCmd = std::string("ATTACH '")+sourceDbFilename+std::string("' AS backupDb;");
-		bool sqlOk = runSqlCommand(attachCmd.c_str());
+		char* attachCmd = sqlite3_mprintf("ATTACH %Q AS backupDb;", sourceDbFilename.c_str());
+		if (!attachCmd)
+			return 0;
+		bool sqlOk = runSqlCommand(attachCmd);
+		sqlite3_free(attachCmd);
 		if (!sqlOk)
 		{
 			PmLogWarning(sysServiceLogContext(),"SQL_ERROR",0,"Failed to run ATTACH cmd to attach [%s] to this db",sourceDbFilename.c_str());
@@ -280,15 +283,12 @@ int PrefsDb::merge(const std::string& sourceDbFilename,bool overwriteSameKeys)
 
 		closePrefsDb();
 		openPrefsDb();
-	}
-	else
-	{
-		PmLogWarning(sysServiceLogContext(),"MERGE_ERROR",0,"Non-destructive merge not yet implemented! Nothing merged");
-		return 0;
+
+		return sqlOk ? 1 : 0;
 	}
 
-	return 1;
-
+	PmLogWarning(sysServiceLogContext(),"MERGE_ERROR",0,"Non-destructive merge not yet implemented! Nothing merged");
+	return 0;
 }
 
 int PrefsDb::copyKeys(PrefsDb * p_sourceDb,const std::list<std::string>& keys,bool overwriteSameKeys)
@@ -346,6 +346,22 @@ sqlite3_stmt* PrefsDb::runSqlQuery(const std::string& queryStr)
 	return statement;
 }
 
+// insert a key/value row with proper SQL quoting of both strings
+static bool insertPrefRow(sqlite3* db, const char* key, const char* value)
+{
+	char* queryStr = sqlite3_mprintf("INSERT INTO Preferences VALUES (%Q, %Q)",
+									 key, value);
+	if (!queryStr)
+		return false;
+
+	int ret = sqlite3_exec(db, queryStr, NULL, NULL, NULL);
+	if (ret) {
+		PmLogWarning(sysServiceLogContext(), "SQL_ERROR", 0, "Failed to execute query: %s", queryStr);
+	}
+	sqlite3_free(queryStr);
+	return (ret == 0);
+}
+
 bool PrefsDb::runSqlCommand(const std::string& cmdStr)
 {
 	bool rc = false;
@@ -371,7 +387,6 @@ bool PrefsDb::runSqlCommand(const std::string& cmdStr)
 	return rc;
 }
 
-//TODO: STILL UNSAFE IF THE KEY HAS SINGLE QUOTES IN IT! (SEE getPref() FOR EXAMPLE OF HOW TO FIX)
 std::map<std::string, std::string> PrefsDb::getPrefs(const std::list<std::string>& keys)
 {
 	sqlite3_stmt* statement = 0;
@@ -387,15 +402,17 @@ std::map<std::string, std::string> PrefsDb::getPrefs(const std::list<std::string
 	if (keys.empty())
 		goto Done;
 
-	query = "SELECT * FROM Preferences WHERE key='";
-	query += keys.front() + "'";
-
-	it = keys.begin();
-	++it;
-
-	for (; it != keys.end(); ++it)
-		query += " OR key='" + (*it) + "'";
-	query += ";";
+	query = "SELECT * FROM Preferences WHERE key IN (";
+	for (it = keys.begin(); it != keys.end(); ++it) {
+		char* quoted = sqlite3_mprintf("%Q", it->c_str());
+		if (!quoted)
+			goto Done;
+		if (it != keys.begin())
+			query += ",";
+		query += quoted;
+		sqlite3_free(quoted);
+	}
+	query += ");";
 
 	ret = sqlite3_prepare(m_prefsDb, query.c_str(), -1, &statement, &tail);
 	if (ret) {
@@ -437,6 +454,10 @@ void PrefsDb::openPrefsDb()
 	int ret = sqlite3_open(m_dbFilename.c_str(), &m_prefsDb);
 	if (ret) {
 		PmLogWarning(sysServiceLogContext(),"DB_OPEN_ERROR",0,"Failed to open preferences db [%s]",m_dbFilename.c_str());
+		// sqlite3_open returns a (broken) handle even on failure; close it
+		// so callers checking m_prefsDb see the open actually failed
+		sqlite3_close(m_prefsDb);
+		m_prefsDb = 0;
 		return;
 	}
 
@@ -615,13 +636,7 @@ void PrefsDb::synchronizeDefaults() {
 		//allow special keys to be overriden
 		if ((cv.length() == 0) || ((strncmp(key.c_str(),".sysservice",11) == 0))) {
 
-			Utils::gstring queryStr = g_strdup_printf("INSERT INTO Preferences "
-													  "VALUES ('%s', '%s')",
-													  key.c_str(), p_cDbv.c_str());
-
-			if (sqlite3_exec(m_prefsDb, queryStr.get(), NULL, NULL, NULL)) {
-				PmLogWarning(sysServiceLogContext(), "SQL_ERROR", 0, "Failed to execute query: %s",queryStr.get());
-			}
+			(void) insertPrefRow(m_prefsDb, key.c_str(), p_cDbv.c_str());
 		}
 	}
 }
@@ -653,13 +668,7 @@ void PrefsDb::synchronizePlatformDefaults() {
 
 		if (cv.length() == 0) {
 
-			Utils::gstring queryStr = g_strdup_printf("INSERT INTO Preferences "
-													  "VALUES ('%s', '%s')",
-													  key.c_str(), p_cDbv.c_str());
-
-			if (sqlite3_exec(m_prefsDb, queryStr.get(), NULL, NULL, NULL)) {
-				PmLogWarning(sysServiceLogContext(), "SQL_ERROR", 0, "Failed to execute query:%s",queryStr.get());
-			}
+			(void) insertPrefRow(m_prefsDb, key.c_str(), p_cDbv.c_str());
 		}
 	}
 }
@@ -690,13 +699,7 @@ void PrefsDb::synchronizeCustomerCareInfo() {
 		std::string cv = getPref(key);
 
 		if (cv.length() == 0) {
-			Utils::gstring queryStr = g_strdup_printf("INSERT INTO Preferences "
-											  "VALUES ('%s', '%s')",
-											  key.c_str(), p_cDbv.c_str());
-
-			if (sqlite3_exec(m_prefsDb, queryStr.get(), NULL, NULL, NULL)) {
-				PmLogWarning(sysServiceLogContext(), "SQL_ERROR", 0, "Failed to execute query: %s", queryStr.get());
-			}
+			(void) insertPrefRow(m_prefsDb, key.c_str(), p_cDbv.c_str());
 		}
 		else if (cv != p_cDbv) {
 			//update
@@ -724,14 +727,8 @@ void PrefsDb::updateWithCustomizationPrefOverrides() {
 		if (!pref.second.isString())
 			continue; //TODO: really should delete this key if it is in the database
 
-		Utils::gstring queryStr = g_strdup_printf("INSERT INTO Preferences "
-										  "VALUES ('%s', '%s')",
-										  pref.first.asString().c_str(),
-										  pref.second.asString().c_str());
-
-		if (sqlite3_exec(m_prefsDb, queryStr.get(), NULL, NULL, NULL)) {
-			PmLogWarning(sysServiceLogContext(), "SQL_ERROR", 0, "Failed to execute query: %s", queryStr.get());
-		}
+		(void) insertPrefRow(m_prefsDb, pref.first.asString().c_str(),
+							 pref.second.asString().c_str());
 	}
 }
 
@@ -740,8 +737,6 @@ static const char* s_DEFAULT_uaProf[]  	= 	{"uaProf","\"http://downloads.palm.co
 static const char* s_DBNEWTOKEN[] = {".prefsdb.setting.dbReset","\"1\""};
 
 void PrefsDb::loadDefaultPrefs() {
-
-	Utils::gstring queryStr { nullptr };
 
 	JValue root = JDomParser::fromFile(s_defaultPrefsFile);
 	if (!root.isObject()) {
@@ -756,29 +751,17 @@ void PrefsDb::loadDefaultPrefs() {
 			goto Stage1a;
 		}
 
-		for (const JValue::KeyValue pref: prefs.children()) {
-
-			queryStr = g_strdup_printf("INSERT INTO Preferences "
-									   "VALUES ('%s', '%s')",
-									   pref.first.asString().c_str(),
-									   pref.second.asString().c_str());
-
-			if (sqlite3_exec(m_prefsDb, queryStr.get(), NULL, NULL, NULL)) {
-				PmLogWarning(sysServiceLogContext(), "SQL_ERROR", 0, "Failed to execute query: %s", queryStr.get());
-			}
+		for (JValue::KeyValue pref: prefs.children()) {
+			// stringify() so structured (non-string) defaults survive intact
+			(void) insertPrefRow(m_prefsDb, pref.first.asString().c_str(),
+								 pref.second.stringify().c_str());
 		}
 	}
 
 Stage1a:
 	// ----------------- Load in the db tokens that let the system service know what restore stage the system is in (after reformats, etc)
 
-	queryStr = g_strdup_printf("INSERT INTO Preferences "
-							   "VALUES ('%s', '%s')",
-							   s_DBNEWTOKEN[0],s_DBNEWTOKEN[1]);
-
-	if (sqlite3_exec(m_prefsDb, queryStr.get(), NULL, NULL, NULL)) {
-		PmLogWarning(sysServiceLogContext(), "SQL_ERROR", 0, "Failed to execute query: %s", queryStr.get());
-	}
+	(void) insertPrefRow(m_prefsDb, s_DBNEWTOKEN[0], s_DBNEWTOKEN[1]);
 
 	//customer care number also...this is in a separate file
 	root = JDomParser::fromFile(s_custCareNumberFile);
@@ -787,41 +770,20 @@ Stage1a:
 		goto Stage3;
 	}
 
-	for (const JValue::KeyValue pref: root.children()) {
+	for (const JValue::KeyValue pref: root["preferences"].children()) {
 
 		if (!pref.second.isString()) continue;
 
-		queryStr = g_strdup_printf("INSERT INTO Preferences "
-								   "VALUES ('%s', '%s')",
-								   pref.first.asString().c_str(),
-								   pref.second.asString().c_str());
-
-		if (sqlite3_exec(m_prefsDb, queryStr.get(), NULL, NULL, NULL)) {
-			PmLogWarning(sysServiceLogContext(), "SQL_ERROR", 0, "Failed to execute query: %s", queryStr.get());
+		if (!insertPrefRow(m_prefsDb, pref.first.asString().c_str(),
+						   pref.second.asString().c_str()))
 			continue;
-		}
 
 		PmLogDebug(sysServiceLogContext(),"loaded key %s with value %s", pref.first.asString().c_str(), pref.second.asString().c_str());
 	}
 
 Stage3:
-	queryStr = g_strdup_printf("INSERT INTO Preferences "
-							   "VALUES ('%s', '%s')",
-							   s_DEFAULT_uaProf[0],s_DEFAULT_uaProf[1]);
-
-	int ret = sqlite3_exec(m_prefsDb, queryStr.get(), NULL, NULL, NULL);
-	if (ret) {
-		PmLogWarning(sysServiceLogContext(), "SQL_ERROR", 0, "[Stage 3] Failed to execute query: %s" , queryStr.get());
-	}
-
-	queryStr = g_strdup_printf("INSERT INTO Preferences "
-							   "VALUES ('%s', '%s')",
-							   s_DEFAULT_uaString[0],s_DEFAULT_uaString[1]);
-
-	ret = sqlite3_exec(m_prefsDb, queryStr.get(), NULL, NULL, NULL);
-	if (ret) {
-		PmLogWarning(sysServiceLogContext(), "SQL_ERROR", 0, "[Stage 3] Failed to execute query: %s" , queryStr.get());
-	}
+	(void) insertPrefRow(m_prefsDb, s_DEFAULT_uaProf[0], s_DEFAULT_uaProf[1]);
+	(void) insertPrefRow(m_prefsDb, s_DEFAULT_uaString[0], s_DEFAULT_uaString[1]);
 
 	//back up the defaults for certain prefs
 	backupDefaultPrefs();
@@ -845,16 +807,10 @@ void PrefsDb::loadDefaultPlatformPrefs() {
 			break;
 		}
 
-		for (const JValue::KeyValue pref: prefs.children()) {
-
-			Utils::gstring queryStr = g_strdup_printf("INSERT INTO Preferences "
-											  "VALUES ('%s', '%s')",
-											  pref.first.asString().c_str(),
-											  pref.second.asString().c_str());
-
-			if (sqlite3_exec(m_prefsDb, queryStr.get(), NULL, NULL, NULL)) {
-				PmLogWarning(sysServiceLogContext(), "SQL_ERRRO", 0, "Failed to execute query: %s", queryStr.get());
-			}
+		for (JValue::KeyValue pref: prefs.children()) {
+			// stringify() so structured (non-string) defaults survive intact
+			(void) insertPrefRow(m_prefsDb, pref.first.asString().c_str(),
+								 pref.second.stringify().c_str());
 		}
 	} while (false);
 

@@ -84,6 +84,7 @@ void NTPClock::postError()
 			);
 		}
 	}
+	requestMessages.clear();
 }
 
 bool NTPClock::requestNTP(LSMessage *message /* = NULL */)
@@ -128,6 +129,9 @@ bool NTPClock::requestNTP(LSMessage *message /* = NULL */)
 		ntpServerTimeout.c_str()
 	);
 
+	// make sure no output from a previous (failed) run is left over
+	sntpOutput.clear();
+
 	gchar **envp = g_get_environ();
 
 	// override all locale related variables (LC_*)
@@ -157,16 +161,45 @@ bool NTPClock::requestNTP(LSMessage *message /* = NULL */)
 		return false;
 	}
 
-	g_child_watch_add( sntpPid, (GChildWatchFunc)cbChild, this);
+	sntpChildWatchId = g_child_watch_add( sntpPid, (GChildWatchFunc)cbChild, this);
 
 	GIOChannel *chOut = g_io_channel_unix_new(fdOut);
+
+	// the pipe fd must go away together with the channel
+	g_io_channel_set_close_on_unref(chOut, TRUE);
 
 	// Non Blocking Mode
 	g_io_channel_set_flags(chOut, G_IO_FLAG_NONBLOCK, NULL);
 
-	g_io_add_watch( chOut, GIOCondition (G_IO_IN | G_IO_HUP), (GIOFunc)cbStdout, this);
+	sntpChannel = chOut;
+	sntpWatchId = g_io_add_watch( chOut, GIOCondition (G_IO_IN | G_IO_HUP), (GIOFunc)cbStdout, this);
 
 	return true;
+}
+
+void NTPClock::drainChannel()
+{
+	if (!sntpChannel)
+		return;
+
+	while (true)
+	{
+		char buf[4096];
+		gsize bytesRead = 0;
+		GIOStatus status = g_io_channel_read_chars(sntpChannel, buf, sizeof(buf), &bytesRead, 0);
+		if (bytesRead > 0)
+			sntpOutput.append(buf, bytesRead);
+		if (status != G_IO_STATUS_NORMAL)
+			break;
+	}
+
+	if (sntpWatchId)
+	{
+		g_source_remove(sntpWatchId);
+		sntpWatchId = 0;
+	}
+	g_io_channel_unref(sntpChannel);
+	sntpChannel = nullptr;
 }
 
 // callbacks
@@ -174,8 +207,12 @@ void NTPClock::cbChild(GPid pid, gint status, NTPClock *ntpClock)
 {
 	// move to new state
 	ntpClock->sntpPid = -1;
+	ntpClock->sntpChildWatchId = 0;
 	g_spawn_close_pid(pid);
 
+	// there is no dispatch-order guarantee between the child watch and the
+	// stdout watch - pull in whatever is still buffered in the pipe
+	ntpClock->drainChannel();
 
 	std::string &sntpOutput = ntpClock->sntpOutput;
 
@@ -185,6 +222,7 @@ void NTPClock::cbChild(GPid pid, gint status, NTPClock *ntpClock)
 			sntpOutput.data(), sntpOutput.size(),
 			kPmLogDumpFormatDefault
 		);
+		sntpOutput.clear();
 		ntpClock->postError();
 		return;
 	}
@@ -211,8 +249,8 @@ void NTPClock::cbChild(GPid pid, gint status, NTPClock *ntpClock)
         char *endptr = 0;
         int offsetIndex = 0;
 
-        for (std::string keyToken : sntpStrings) {
-               if (keyToken[0] == '+' || keyToken[0] == '-') {
+        for (const std::string &keyToken : sntpStrings) {
+               if (!keyToken.empty() && (keyToken[0] == '+' || keyToken[0] == '-')) {
                      if (keyToken.find('.') != std::string::npos) {
                           startptr = sntpStrings[offsetIndex].c_str();
                           break;
@@ -223,12 +261,13 @@ void NTPClock::cbChild(GPid pid, gint status, NTPClock *ntpClock)
 
         if (startptr == NULL) {
              //the query failed in some way
+             sntpOutput.clear();
              ntpClock->postError();
              return;
         }
         PmLogDebug(sysServiceLogContext(), "offset: %s", startptr);
 
-	time_t offsetValue = strtol(startptr, &endptr, /* base = */ 10);
+	time_t offsetValue = (time_t) strtoll(startptr, &endptr, /* base = */ 10);
 	if ( endptr == startptr ||
 		 (*endptr != '\0' && strchr(" \t#.", *endptr) == NULL) )
 	{
@@ -247,26 +286,30 @@ void NTPClock::cbChild(GPid pid, gint status, NTPClock *ntpClock)
 
 gboolean NTPClock::cbStdout(GIOChannel *channel, GIOCondition cond, NTPClock *ntpClock)
 {
-	if (cond == G_IO_HUP)
-	{
-		g_io_channel_unref(channel);
-		return false;
-	}
+	(void) cond; // G_IO_IN and G_IO_HUP can arrive combined; just read
 
 	while (true)
 	{
 		char buf[4096];
-		gsize bytesRead;
+		gsize bytesRead = 0;
 		GIOStatus status = g_io_channel_read_chars(channel, buf, sizeof(buf), &bytesRead, 0);
+		if (bytesRead > 0)
+			ntpClock->sntpOutput.append(buf, bytesRead);
+
 		if (status == G_IO_STATUS_AGAIN) break;
-		else if (status == G_IO_STATUS_EOF) return false;
-		else if (status == G_IO_STATUS_ERROR)
-		{
+		if (status == G_IO_STATUS_ERROR)
 			PmLogDebug(sysServiceLogContext(), "Error during read");
+		if (status == G_IO_STATUS_EOF || status == G_IO_STATUS_ERROR)
+		{
+			// done with this channel; drop our reference (closes the fd)
+			if (ntpClock->sntpChannel == channel)
+			{
+				ntpClock->sntpChannel = nullptr;
+				ntpClock->sntpWatchId = 0;
+			}
+			g_io_channel_unref(channel);
 			return false;
 		}
-
-		ntpClock->sntpOutput.append(buf, bytesRead);
 	}
 	return true;
 }

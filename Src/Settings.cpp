@@ -25,14 +25,14 @@ static const char* kSettingsFile = WEBOS_INSTALL_WEBOS_SYSCONFDIR "/sysservice.c
 static const char* kSettingsFilePlatform = WEBOS_INSTALL_WEBOS_SYSCONFDIR "/sysservice-platform.conf";
 
 Settings::Settings()
-	: schemaValidationOption(EIgnore)
-	, m_turnNovacomOnAtStartup(false)
+	: m_turnNovacomOnAtStartup(false)
 	, m_saveLastBackedUpTempDb(false)
 	, m_saveLastRestoredTempDb(false)
 	, m_logLevel()
 	, m_useComPalmImage2(false)
 	, m_image2svcAvailable(false)
 	, m_comPalmImage2BinaryFile("/usr/bin/acuteimaging")
+	, schemaValidationOption(EIgnore)
 	, switchTimezoneOnManualTime(false)
         , useLocalizedTZ(false)
 {
@@ -112,27 +112,29 @@ bool Settings::load(const char* settingsFile)
 
 bool Settings::parseCommandlineOptions(int argc, char** argv)
 {
-	gchar* s_logLevelStr = NULL;
+	gchar* logLevelStr = NULL;
 	GError* err = nullptr;
 
 	std::unique_ptr<GError*, void(*)(GError**)>
-			error(&err, [](GError** ptr) { g_error_free(*ptr); });
+			error(&err, [](GError** ptr) { if (*ptr) g_error_free(*ptr); });
 	std::unique_ptr<GOptionContext, void(*)(GOptionContext*)>
 			context(g_option_context_new(nullptr), g_option_context_free);
 
-	static GOptionEntry entries[] = {
-		{ "logger", 'l', 0, G_OPTION_ARG_STRING,  &s_logLevelStr, "log level", "level"},
+	GOptionEntry entries[] = {
+		{ "logger", 'l', 0, G_OPTION_ARG_STRING,  &logLevelStr, "log level", "level"},
 		{ NULL }
 	};
 
 	g_option_context_add_main_entries(context.get(), entries, nullptr);
 	if (!g_option_context_parse (context.get(), &argc, &argv, error.get()))
 	{
-		g_printerr("Error: %s\n", (*error.get())->message);
+		g_printerr("Error: %s\n", err ? err->message : "unknown");
+		g_free(logLevelStr);
 		return false;
 	}
 
-	m_logLevel = s_logLevelStr ? s_logLevelStr : "";
+	m_logLevel = logLevelStr ? logLevelStr : "";
+	g_free(logLevelStr);
 	std::transform(m_logLevel.begin(), m_logLevel.end(), m_logLevel.begin(), ::tolower);
 
 	return true;

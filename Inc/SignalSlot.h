@@ -23,14 +23,13 @@
 
 class Trackable;
 
-namespace {
 class Sender
 {
 public:
-	
+
+	virtual ~Sender() {}
 	virtual void disconnectTrackable(Trackable* recv) = 0;
 };
-}
 
 class Trackable {
 public:
@@ -64,16 +63,29 @@ public:
 	inline Trackable* receiver() const {
 		return m_receiver;
 	}
-	
+
 protected:
+
+	FunctionWrapper() : m_receiver(0), m_function() {}
 
 	Trackable* m_receiver;
 	Function m_function;
 };
 
 
+// common root so a signal can reach the receiver through a SlotBase pointer
+// without casting to an unrelated Slot instantiation
+class SlotRoot
+{
+public:
+
+	virtual ~SlotRoot() {}
+	virtual Trackable* slotReceiver() const = 0;
+};
+
+
 template <class Arg0=void, class Arg1=void, class Arg2=void, class Arg3=void, class Arg4=void>
-class SlotBase
+class SlotBase : public SlotRoot
 {
 public:
 
@@ -81,48 +93,43 @@ public:
 };
 
 template <>
-class SlotBase<void, void, void, void, void>
+class SlotBase<void, void, void, void, void> : public SlotRoot
 {
 public:
 	
 	virtual void fire() = 0;
-	virtual ~SlotBase() {}
 };
 
 template <class Arg0>
-class SlotBase<Arg0, void, void, void, void>
+class SlotBase<Arg0, void, void, void, void> : public SlotRoot
 {
 public:
 	
 	virtual void fire(Arg0 arg0) = 0;
-	virtual ~SlotBase() {}
 };
 
 template <class Arg0, class Arg1>
-class SlotBase<Arg0, Arg1, void, void, void>
+class SlotBase<Arg0, Arg1, void, void, void> : public SlotRoot
 {
 public:
 	
 	virtual void fire(Arg0 arg0, Arg1 arg1) = 0;
-	virtual ~SlotBase() {}
 };
 
 template <class Arg0, class Arg1, class Arg2>
-class SlotBase<Arg0, Arg1, Arg2, void, void>
+class SlotBase<Arg0, Arg1, Arg2, void, void> : public SlotRoot
 {
 public:
 	
 	virtual void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2) = 0;
-	virtual ~SlotBase() {}
 };
 
 template <class Arg0, class Arg1, class Arg2, class Arg3>
-class SlotBase<Arg0, Arg1, Arg2, Arg3, void>
+class SlotBase<Arg0, Arg1, Arg2, Arg3, void> : public SlotRoot
 {
 public:
 	
 	virtual void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3) = 0;
-	virtual ~SlotBase() {}
 };
 
 
@@ -137,7 +144,7 @@ class VoidSlot;
 
 template <class Receiver, class Arg0=void, class Arg1=void, class Arg2=void, class Arg3=void, class Arg4=void>
 class Slot : public SlotBase<Arg0, Arg1, Arg2, Arg3, Arg4>,
-			 public FunctionWrapper<void (*)()>
+			 public FunctionWrapper<void (Receiver::*)(Arg0,Arg1,Arg2,Arg3,Arg4)>
 {
 public:
 
@@ -148,7 +155,11 @@ public:
 		this->m_function = func;
 	}
 
-	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4) {
+	Trackable* slotReceiver() const override {
+		return this->m_receiver;
+	}
+
+	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4) override {
 		(static_cast<Receiver*>(this->m_receiver)->*(this->m_function))(arg0, arg1, arg2, arg3, arg4);
 	}	
 };
@@ -164,6 +175,10 @@ public:
 	Slot(Receiver* rec, Function func) {
 		this->m_receiver = rec;
 		this->m_function = func;
+	}
+
+	Trackable* slotReceiver() const override {
+		return this->m_receiver;
 	}
 
 	void fire() {
@@ -186,6 +201,10 @@ public:
 		this->m_function = func;
 	}
 
+	Trackable* slotReceiver() const override {
+		return this->m_receiver;
+	}
+
 	void fire(Arg0 arg) {
 		(static_cast<Receiver*>(this->m_receiver)->*(this->m_function))(arg);
 	}
@@ -202,6 +221,10 @@ public:
 	Slot(Receiver* rec, Function func) {
 		this->m_receiver = rec;
 		this->m_function = func;
+	}
+
+	Trackable* slotReceiver() const override {
+		return this->m_receiver;
 	}
 
 	void fire(Arg0 arg0, Arg1 arg1) {
@@ -223,7 +246,11 @@ public:
 		this->m_function = func;
 	}
 
-	void fire(Arg0 arg0, Arg1 arg1) {
+	Trackable* slotReceiver() const override {
+		return this->m_receiver;
+	}
+
+	void fire(Arg0 arg0, Arg1 arg1) override {
 		(void)(static_cast<Receiver*>(this->m_receiver)->*(this->m_function))(arg0, arg1);
 	}
 };
@@ -242,7 +269,11 @@ public:
 		this->m_function = func;
 	}
 
-	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2) {
+	Trackable* slotReceiver() const override {
+		return this->m_receiver;
+	}
+
+	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2) override {
 		(void)(static_cast<Receiver*>(this->m_receiver)->*(this->m_function))(arg0, arg1, arg2);
 	}
 };
@@ -258,6 +289,10 @@ public:
 	Slot(Receiver* rec, Function func) {
 		this->m_receiver = rec;
 		this->m_function = func;
+	}
+
+	Trackable* slotReceiver() const override {
+		return this->m_receiver;
 	}
 
 	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2) {
@@ -278,7 +313,11 @@ public:
 		this->m_function = func;
 	}
 
-	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3) {
+	Trackable* slotReceiver() const override {
+		return this->m_receiver;
+	}
+
+	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3) override {
 		(static_cast<Receiver*>(this->m_receiver)->*(this->m_function))(arg0, arg1, arg2, arg3);
 	}	
 };
@@ -292,19 +331,12 @@ class SignalBase : public Sender
 {
 public:
 
-	typedef Slot<Trackable, Arg0, Arg1, Arg2, Arg3, Arg4> Sl;
-	
-	virtual ~SignalBase() {
+	~SignalBase() override {
 		for (typename SlotSet::const_iterator it = this->m_slots.begin();
 			 it != this->m_slots.end(); ++it) {
-			Sl* s = static_cast<Sl*>(*it);
-			s->receiver()->disconnected(this);
+			(*it)->slotReceiver()->disconnected(this);
 			delete (*it);
 		}
-	}
-
-	void connect(SlotBase<Arg0, Arg1, Arg2, Arg3, Arg4>* slot) {
-		m_slots.insert(slot);
 	}
 
 	void connect(Trackable* recv, SlotBase<Arg0, Arg1, Arg2, Arg3, Arg4>* slot) {
@@ -316,8 +348,7 @@ public:
 		typename SlotSet::iterator it = this->m_slots.begin();
 		typename SlotSet::iterator itEnd = this->m_slots.end();
 		while (it != itEnd) {
-			Sl* s = static_cast<Sl*>(*it);
-			if (s->receiver() == recv) {
+			if ((*it)->slotReceiver() == recv) {
 				delete (*it);
 				this->m_slots.erase(it++);
 				continue;
@@ -325,9 +356,12 @@ public:
 
 			++it;
 		}
+		// let the receiver forget this signal too, or its destructor would
+		// call back into a signal that may already be gone
+		recv->disconnected(this);
 	}
 
-	virtual void disconnectTrackable(Trackable* recv) {
+	void disconnectTrackable(Trackable* recv) override {
 		disconnect(recv);
 	}
 	
@@ -344,13 +378,17 @@ public:
 
 	template <class Receiver>
 	void connect(Receiver* rec, void (Receiver::*func)(Arg0, Arg1, Arg2, Arg3, Arg4)) {
-		SignalBase<Arg0>::connect(rec, new Slot<Receiver, Arg0, Arg1, Arg2, Arg3, Arg4>(rec, func));
+		SignalBase<Arg0, Arg1, Arg2, Arg3, Arg4>::connect(rec, new Slot<Receiver, Arg0, Arg1, Arg2, Arg3, Arg4>(rec, func));
 	}
 
 	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4) {
-		typename std::set<SlotBase<Arg0, Arg1, Arg2, Arg3, Arg4>* >::iterator it = this->m_slots.begin();
-		while (it != this->m_slots.end()) {
-			(*it++)->fire(arg0, arg1, arg2, arg3, arg4);
+		// fire on a snapshot: a handler may disconnect other receivers,
+		// which would invalidate an iterator into the live set
+		const std::set<SlotBase<Arg0, Arg1, Arg2, Arg3, Arg4>* > snapshot = this->m_slots;
+		for (typename std::set<SlotBase<Arg0, Arg1, Arg2, Arg3, Arg4>* >::const_iterator it = snapshot.begin();
+			 it != snapshot.end(); ++it) {
+			if (this->m_slots.find(*it) != this->m_slots.end())
+				(*it)->fire(arg0, arg1, arg2, arg3, arg4);
 		}
 	}
 };
@@ -367,9 +405,13 @@ public:
 	}
 		
 	void fire() {
-		std::set<SlotBase<>* >::iterator it = this->m_slots.begin();
-		while (it != this->m_slots.end()) {
-			(*it++)->fire();
+		// fire on a snapshot: a handler may disconnect other receivers,
+		// which would invalidate an iterator into the live set
+		const std::set<SlotBase<>* > snapshot = this->m_slots;
+		for (std::set<SlotBase<>* >::const_iterator it = snapshot.begin();
+			 it != snapshot.end(); ++it) {
+			if (this->m_slots.find(*it) != this->m_slots.end())
+				(*it)->fire();
 		}
 	}
 };
@@ -385,9 +427,13 @@ public:
 	}
 
 	void fire(Arg0 arg0) {
-		typename std::set<SlotBase<Arg0>* >::iterator it = this->m_slots.begin();
-		while (it != this->m_slots.end()) {
-			(*it++)->fire(arg0);
+		// fire on a snapshot: a handler may disconnect other receivers,
+		// which would invalidate an iterator into the live set
+		const std::set<SlotBase<Arg0>* > snapshot = this->m_slots;
+		for (typename std::set<SlotBase<Arg0>* >::const_iterator it = snapshot.begin();
+			 it != snapshot.end(); ++it) {
+			if (this->m_slots.find(*it) != this->m_slots.end())
+				(*it)->fire(arg0);
 		}
 	}
 };
@@ -408,9 +454,13 @@ public:
 	}
 
 	void fire(Arg0 arg0, Arg1 arg1) {
-		typename std::set<SlotBase<Arg0, Arg1>* >::iterator it = this->m_slots.begin();
-		while (it != this->m_slots.end()) {
-			(*it++)->fire(arg0, arg1);
+		// fire on a snapshot: a handler may disconnect other receivers,
+		// which would invalidate an iterator into the live set
+		const std::set<SlotBase<Arg0, Arg1>* > snapshot = this->m_slots;
+		for (typename std::set<SlotBase<Arg0, Arg1>* >::const_iterator it = snapshot.begin();
+			 it != snapshot.end(); ++it) {
+			if (this->m_slots.find(*it) != this->m_slots.end())
+				(*it)->fire(arg0, arg1);
 		}
 	}
 };
@@ -431,9 +481,13 @@ public:
 	}
 
 	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2) {
-		typename std::set<SlotBase<Arg0, Arg1, Arg2>* >::iterator it = this->m_slots.begin();
-		while (it != this->m_slots.end()) {
-			(*it++)->fire(arg0, arg1, arg2);
+		// fire on a snapshot: a handler may disconnect other receivers,
+		// which would invalidate an iterator into the live set
+		const std::set<SlotBase<Arg0, Arg1, Arg2>* > snapshot = this->m_slots;
+		for (typename std::set<SlotBase<Arg0, Arg1, Arg2>* >::const_iterator it = snapshot.begin();
+			 it != snapshot.end(); ++it) {
+			if (this->m_slots.find(*it) != this->m_slots.end())
+				(*it)->fire(arg0, arg1, arg2);
 		}
 	}
 };
@@ -449,9 +503,13 @@ public:
 	}
 
 	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3) {
-		typename std::set<SlotBase<Arg0, Arg1, Arg2, Arg3>* >::iterator it = this->m_slots.begin();
-		while (it != this->m_slots.end()) {
-			(*it++)->fire(arg0, arg1, arg2, arg3);
+		// fire on a snapshot: a handler may disconnect other receivers,
+		// which would invalidate an iterator into the live set
+		const std::set<SlotBase<Arg0, Arg1, Arg2, Arg3>* > snapshot = this->m_slots;
+		for (typename std::set<SlotBase<Arg0, Arg1, Arg2, Arg3>* >::const_iterator it = snapshot.begin();
+			 it != snapshot.end(); ++it) {
+			if (this->m_slots.find(*it) != this->m_slots.end())
+				(*it)->fire(arg0, arg1, arg2, arg3);
 		}
 	}
 };

@@ -118,7 +118,9 @@ private:
 					const char* ruleName, const char* format,
 					int bias);
 	static int getCurrentYear();
+	// result must have room for kOffsetTimeBufSize bytes
+	static const size_t kOffsetTimeBufSize = 16;
 	static void setOffsetToTime(int offset, char *result);
-};	
+};
 
 #endif /* TIMEZONESERVICE_H */

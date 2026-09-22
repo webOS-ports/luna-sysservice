@@ -26,15 +26,15 @@ private:
         void init();
 public:
 
-	RingtonePrefsHandler(LSHandle* serviceHandle);
-	virtual ~RingtonePrefsHandler();
+	explicit RingtonePrefsHandler(LSHandle* serviceHandle);
+	~RingtonePrefsHandler() override;
 
-	virtual std::list<std::string> keys() const;
-	virtual bool validate(const std::string& key, const pbnjson::JValue &value);
-	virtual void valueChanged(const std::string& key, const pbnjson::JValue &value);
-	virtual pbnjson::JValue valuesForKey(const std::string& key);
-	virtual bool isPrefConsistent();
-	virtual void restoreToDefault();
+	std::list<std::string> keys() const override;
+	bool validate(const std::string& key, const pbnjson::JValue &value) override;
+	void valueChanged(const std::string& key, const pbnjson::JValue &value) override;
+	pbnjson::JValue valuesForKey(const std::string& key) override;
+	bool isPrefConsistent() override;
+	void restoreToDefault() override;
 };
  
 #endif

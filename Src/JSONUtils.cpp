@@ -93,9 +93,14 @@ bool LSMessageJsonParser::parse(const char * callerFunction, LSHandle * lssender
 	if (EIgnore == validationOption) return true;
 
 	const char * payload = getPayload();
+	if (!payload)
+	{
+		PmLogWarning(sysServiceLogContext(), "JSON_ERROR", 0, "[JSON Error] : [%s : %s]: no payload in message sent by '%s'", callerFunction, getMsgCategoryMethod().c_str(), getSender().c_str());
+		return false;
+	}
 
 	// Parse the message with given schema.
-	if ((payload) && (!mParser.parse(payload, mSchema)))
+	if (!mParser.parse(payload, mSchema))
 	{
 		// Unable to parse the message with given schema
 

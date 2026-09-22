@@ -49,7 +49,7 @@ std::list<std::string> LocalePrefsHandler::keys() const
 
 bool LocalePrefsHandler::validateLocale(const JValue &value)
 {
-	if (value.isObject())
+	if (!value.isObject())
 		return false;
 
 	std::string languageCode;

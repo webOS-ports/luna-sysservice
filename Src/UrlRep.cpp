@@ -32,11 +32,15 @@ UrlRep UrlRep::fromUrl(const char* uri)
 	
 	UriParserStateA state;
 	UriUriA uriA;
-	UriQueryListA* queryList;
+	UriQueryListA* queryList = NULL;
 	int queryCount;
 
 	state.uri = &uriA;
-	uriParseUriA(&state, uri);
+	if (uriParseUriA(&state, uri) != URI_SUCCESS) {
+		// leave urlRep.valid == false so callers reject the input
+		uriFreeUriMembersA(&uriA);
+		return urlRep;
+	}
 
 	urlRep.query.clear();
 	
@@ -61,20 +65,20 @@ UrlRep UrlRep::fromUrl(const char* uri)
 	}
 	
 	if (uriA.query.first) {
-		uriDissectQueryMallocA(&queryList, &queryCount,
-							   uriA.query.first,
-							   uriA.query.afterLast);
-
-		UriQueryListA* tmpQueryList = queryList;
-		while (tmpQueryList) {
-			if (tmpQueryList->key) {
-				urlRep.query[tmpQueryList->key] = tmpQueryList->value ?
-												  tmpQueryList->value : std::string();
+		if (uriDissectQueryMallocA(&queryList, &queryCount,
+								   uriA.query.first,
+								   uriA.query.afterLast) == URI_SUCCESS) {
+			UriQueryListA* tmpQueryList = queryList;
+			while (tmpQueryList) {
+				if (tmpQueryList->key) {
+					urlRep.query[tmpQueryList->key] = tmpQueryList->value ?
+													  tmpQueryList->value : std::string();
+				}
+				tmpQueryList = tmpQueryList->next;
 			}
-			tmpQueryList = tmpQueryList->next;
-		}
 
-		uriFreeQueryListA(queryList);
+			uriFreeQueryListA(queryList);
+		}
 	}
 	
 	uriFreeUriMembersA(&uriA);	       
