@@ -1,0 +1,9 @@
+# clang -fsanitize-ignorelist for run-sanitizers.sh (asan-clang).
+#
+# The base64 coder moves bytes between char, unsigned char and int on
+# purpose: every such implicit conversion there is a byte being repacked,
+# none of it undefined behaviour, and the padding lookup that yields npos
+# (truncated to 255) only feeds bits that are thrown away. The implicit
+# conversion checks stay on for everything else.
+[implicit-conversion]
+fun:*base64*

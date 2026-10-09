@@ -1,0 +1,545 @@
+# Pre-existing static-analysis findings; static-analysis.sh fails only on
+# findings that are not listed here. One line per finding (repeated when
+# reported more than once), without line numbers:
+# tool<TAB>severity<TAB>file<TAB>check<TAB>message
+# Regenerate with: tests/hardening/static-analysis.sh <build> --update-baseline
+clang analyzer	warning	Src/NTPClock.cpp	optin.core.EnumCastOutOfRange	The value '17' provided to the cast expression is not in the valid range of values for the enum
+clang analyzer	warning	Src/PrefsDb.cpp	deadcode.DeadStores	Although the value stored to 'ret' is used in the enclosing expression, the value is never actually read from 'ret'
+clang analyzer	warning	Src/PrefsDb.cpp	deadcode.DeadStores	Although the value stored to 'ret' is used in the enclosing expression, the value is never actually read from 'ret'
+clang analyzer	warning	Src/TimePrefsHandler.cpp	deadcode.DeadStores	Value stored to 'getOk' during its initialization is never read
+clang analyzer	warning	Src/TimePrefsHandler.cpp	deadcode.DeadStores	Value stored to 'retVal' is never read
+clang analyzer	warning	Src/TimeZoneService.cpp	deadcode.DeadStores	Value stored to 'easDaylightBias' is never read
+clang analyzer	warning	Src/TimeZoneService.cpp	deadcode.DeadStores	Value stored to 'easStandardBias' is never read
+clang analyzer	warning	Src/UrlRep.cpp	security.insecureAPI.strcpy	Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119
+clang analyzer	warning	Src/Utils.cpp	security.insecureAPI.strcpy	Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119
+clang analyzer	warning	Src/Utils.cpp	unix.Stream	File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior
+clang-tidy	warning	Inc/BroadcastTime.h	performance-enum-size	enum '(unnamed enum at /home/herrie/claude-scratch/testr/sysservice-hardening-wt/Inc/BroadcastTime.h:N)' uses a larger base type ('unsigned int', size: 4 bytes) than necessary for its value set, consider using 'std::uint8_t' (1 byte) as the base type to reduce its size
+clang-tidy	warning	Inc/PrefsFactory.h	performance-enum-size	enum 'Errors' uses a larger base type ('unsigned int', size: 4 bytes) than necessary for its value set, consider using 'std::uint8_t' (1 byte) as the base type to reduce its size
+clang-tidy	warning	Inc/Settings.h	performance-enum-size	enum 'ESchemaErrorOptions' uses a larger base type ('unsigned int', size: 4 bytes) than necessary for its value set, consider using 'std::uint8_t' (1 byte) as the base type to reduce its size
+clang-tidy	warning	Inc/SignalSlot.h	portability-template-virtual-member-function	unspecified virtual member function instantiation; the virtual member function is not instantiated but it might be with a different compiler
+clang-tidy	warning	Inc/SignalSlot.h	portability-template-virtual-member-function	unspecified virtual member function instantiation; the virtual member function is not instantiated but it might be with a different compiler
+clang-tidy	warning	Inc/SignalSlot.h	portability-template-virtual-member-function	unspecified virtual member function instantiation; the virtual member function is not instantiated but it might be with a different compiler
+clang-tidy	warning	Inc/SignalSlot.h	portability-template-virtual-member-function	unspecified virtual member function instantiation; the virtual member function is not instantiated but it might be with a different compiler
+clang-tidy	warning	Inc/SignalSlot.h	portability-template-virtual-member-function	unspecified virtual member function instantiation; the virtual member function is not instantiated but it might be with a different compiler
+clang-tidy	warning	Inc/SignalSlot.h	portability-template-virtual-member-function	unspecified virtual member function instantiation; the virtual member function is not instantiated but it might be with a different compiler
+clang-tidy	warning	Inc/Singleton.h	bugprone-crtp-constructor-accessibility	protected constructor allows the CRTP to be inherited from as a regular template class; consider making it private and declaring the derived class as friend
+clang-tidy	warning	Inc/Singleton.h	portability-template-virtual-member-function	unspecified virtual member function instantiation; the virtual member function is not instantiated but it might be with a different compiler
+clang-tidy	warning	Inc/SystemRestore.h	performance-enum-size	enum 'MSMState' uses a larger base type ('unsigned int', size: 4 bytes) than necessary for its value set, consider using 'std::uint8_t' (1 byte) as the base type to reduce its size
+clang-tidy	warning	Inc/TimePrefsHandler.h	bugprone-macro-parentheses	macro replacement list should be enclosed in parentheses
+clang-tidy	warning	Inc/TimePrefsHandler.h	performance-enum-size	enum '(unnamed enum at /home/herrie/claude-scratch/testr/sysservice-hardening-wt/Inc/TimePrefsHandler.h:N)' uses a larger base type ('unsigned int', size: 4 bytes) than necessary for its value set, consider using 'std::uint8_t' (1 byte) as the base type to reduce its size
+clang-tidy	warning	Inc/TimePrefsHandler.h	performance-enum-size	enum '(unnamed enum at /home/herrie/claude-scratch/testr/sysservice-hardening-wt/Inc/TimePrefsHandler.h:N)' uses a larger base type ('unsigned int', size: 4 bytes) than necessary for its value set, consider using 'std::uint8_t' (1 byte) as the base type to reduce its size
+clang-tidy	warning	Src/BackupManager.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/BackupManager.cpp	performance-faster-string-find	'find' called with a string literal consisting of a single character; consider using the more effective overload accepting a character
+clang-tidy	warning	Src/BackupManager.cpp	performance-inefficient-string-concatenation	string concatenation results in allocation of unnecessary temporary strings; consider using 'operator+=' or 'string::append()' instead
+clang-tidy	warning	Src/BackupManager.cpp	performance-unnecessary-value-param	the const qualified parameter 'fileList' is copied for each invocation; consider making it a reference
+clang-tidy	warning	Src/BuildInfoHandler.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/ClockHandler.cpp	performance-unnecessary-value-param	the parameter 'source' is copied for each invocation but only used as a const reference; consider making it a const reference
+clang-tidy	warning	Src/ImageHelpers.cpp	bugprone-narrowing-conversions	narrowing conversion from 'double' to 'int'
+clang-tidy	warning	Src/ImageServices.cpp	bugprone-narrowing-conversions	narrowing conversion from 'uint32_t' (aka 'unsigned int') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/ImageServices.cpp	bugprone-narrowing-conversions	narrowing conversion from 'uint32_t' (aka 'unsigned int') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/ImageServices.cpp	bugprone-narrowing-conversions	narrowing conversion from 'uint32_t' (aka 'unsigned int') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/Logging.cpp	bugprone-branch-clone	repeated branch body in conditional chain
+clang-tidy	warning	Src/Logging.cpp	cert-dcl50-cpp	do not define a C-style variadic function; consider using a function parameter pack or currying instead
+clang-tidy	warning	Src/Logging.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Main.cpp	bugprone-narrowing-conversions	narrowing conversion from 'unsigned long' to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/Main.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/Main.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/NTPClock.cpp	clang-analyzer-optin.core.EnumCastOutOfRange	The value '17' provided to the cast expression is not in the valid range of values for the enum
+clang-tidy	warning	Src/PrefsDb.cpp	clang-analyzer-deadcode.DeadStores	Although the value stored to 'ret' is used in the enclosing expression, the value is never actually read from 'ret'
+clang-tidy	warning	Src/PrefsDb.cpp	clang-analyzer-deadcode.DeadStores	Although the value stored to 'ret' is used in the enclosing expression, the value is never actually read from 'ret'
+clang-tidy	warning	Src/PrefsFactory.cpp	bugprone-switch-missing-default-case	switching on non-enum value without default case may not cover all cases
+clang-tidy	warning	Src/PrefsFactory.cpp	cert-env33-c	calling 'popen' uses a command processor
+clang-tidy	warning	Src/PrefsFactory.cpp	performance-for-range-copy	loop variable is copied but only used as const reference; consider making it a const reference
+clang-tidy	warning	Src/PrefsFactory.cpp	performance-unnecessary-copy-initialization	local copy 'reply' of the variable 'json_string' is never modified; consider avoiding the copy
+clang-tidy	warning	Src/PrefsFactory.cpp	performance-unnecessary-value-param	the parameter 'command' is copied for each invocation but only used as a const reference; consider making it a const reference
+clang-tidy	warning	Src/Settings.cpp	bugprone-macro-parentheses	macro argument should be enclosed in parentheses
+clang-tidy	warning	Src/Settings.cpp	bugprone-macro-parentheses	macro argument should be enclosed in parentheses
+clang-tidy	warning	Src/Settings.cpp	bugprone-macro-parentheses	macro argument should be enclosed in parentheses
+clang-tidy	warning	Src/Settings.cpp	bugprone-macro-parentheses	macro argument should be enclosed in parentheses
+clang-tidy	warning	Src/Settings.cpp	bugprone-multi-level-implicit-pointer-conversion	multilevel pointer conversion from 'gchar **' (aka 'char **') to 'void *', please use explicit cast
+clang-tidy	warning	Src/SystemRestore.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/SystemRestore.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/SystemRestore.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-assignment-in-if-condition	an assignment within an 'if' condition is bug-prone
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-assignment-in-if-condition	an assignment within an 'if' condition is bug-prone
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-assignment-in-if-condition	an assignment within an 'if' condition is bug-prone
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-assignment-in-if-condition	an assignment within an 'if' condition is bug-prone
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-assignment-in-if-condition	an assignment within an 'if' condition is bug-prone
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-assignment-in-if-condition	an assignment within an 'if' condition is bug-prone
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-implicit-widening-of-multiplication-result	performing an implicit widening conversion to type 'const time_t' (aka 'const long') of a multiplication performed in type 'int'
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-implicit-widening-of-multiplication-result	performing an implicit widening conversion to type 'long' of a multiplication performed in type 'int'
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-macro-parentheses	macro argument should be enclosed in parentheses
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'long' to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'long' to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'long' to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'long' to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'long' to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'long' to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'long' to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'long' to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'long' to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'size_type' (aka 'unsigned long') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'ssize_t' (aka 'long') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'time_t' (aka 'long') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'time_t' (aka 'long') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'unsigned long' to signed type 'time_t' (aka 'long') is implementation-defined
+clang-tidy	warning	Src/TimePrefsHandler.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TimePrefsHandler.cpp	clang-analyzer-deadcode.DeadStores	Value stored to 'getOk' during its initialization is never read
+clang-tidy	warning	Src/TimePrefsHandler.cpp	clang-analyzer-deadcode.DeadStores	Value stored to 'retVal' is never read
+clang-tidy	warning	Src/TimePrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimePrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimePrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimePrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimePrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimePrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimePrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimePrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimePrefsHandler.cpp	misc-no-recursion	function 'switchTimeZone' is within a recursive call chain
+clang-tidy	warning	Src/TimePrefsHandler.cpp	misc-no-recursion	function 'valueChanged' is within a recursive call chain
+clang-tidy	warning	Src/TimePrefsHandler.cpp	performance-avoid-endl	do not use 'std::endl' with streams; use '\n' instead
+clang-tidy	warning	Src/TimePrefsHandler.cpp	performance-unnecessary-value-param	the const qualified parameter 'hrValue' is copied for each invocation; consider making it a reference
+clang-tidy	warning	Src/TimeZoneService.cpp	bugprone-implicit-widening-of-multiplication-result	performing an implicit widening conversion to type 'time_t' (aka 'long') of a multiplication performed in type 'int'
+clang-tidy	warning	Src/TimeZoneService.cpp	bugprone-narrowing-conversions	narrowing conversion from 'int' to signed type 'char' is implementation-defined
+clang-tidy	warning	Src/TimeZoneService.cpp	bugprone-narrowing-conversions	narrowing conversion from 'time_t' (aka 'long') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimeZoneService.cpp	bugprone-narrowing-conversions	narrowing conversion from 'time_t' (aka 'long') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/TimeZoneService.cpp	bugprone-signed-char-misuse,cert-str34-c	'signed char' to 'int' conversion; consider casting to 'unsigned char' first.
+clang-tidy	warning	Src/TimeZoneService.cpp	bugprone-signed-char-misuse,cert-str34-c	'signed char' to 'int' conversion; consider casting to 'unsigned char' first.
+clang-tidy	warning	Src/TimeZoneService.cpp	bugprone-signed-char-misuse,cert-str34-c	'signed char' to 'int' conversion; consider casting to 'unsigned char' first.
+clang-tidy	warning	Src/TimeZoneService.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TimeZoneService.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TimeZoneService.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TimeZoneService.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TimeZoneService.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TimeZoneService.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TimeZoneService.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TimeZoneService.cpp	clang-analyzer-deadcode.DeadStores	Value stored to 'easDaylightBias' is never read
+clang-tidy	warning	Src/TimeZoneService.cpp	clang-analyzer-deadcode.DeadStores	Value stored to 'easStandardBias' is never read
+clang-tidy	warning	Src/TimeZoneService.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimeZoneService.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimeZoneService.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimeZoneService.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimeZoneService.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimeZoneService.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/TimeZoneService.cpp	performance-unnecessary-copy-initialization	the variable 'r' is copy-constructed from a const reference but is only used as const reference; consider making it a const reference
+clang-tidy	warning	Src/TzParser.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TzParser.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TzParser.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TzParser.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/TzParser.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/UrlRep.cpp	bugprone-macro-parentheses	macro argument should be enclosed in parentheses
+clang-tidy	warning	Src/UrlRep.cpp	bugprone-macro-parentheses	macro argument should be enclosed in parentheses
+clang-tidy	warning	Src/UrlRep.cpp	clang-analyzer-security.insecureAPI.strcpy	Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119
+clang-tidy	warning	Src/Utils.cpp	bugprone-narrowing-conversions	narrowing conversion from '__off_t' (aka 'long') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/Utils.cpp	bugprone-narrowing-conversions	narrowing conversion from 'size_type' (aka 'unsigned long') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/Utils.cpp	bugprone-narrowing-conversions	narrowing conversion from 'unsigned char' to signed type 'char' is implementation-defined
+clang-tidy	warning	Src/Utils.cpp	bugprone-narrowing-conversions	narrowing conversion from 'unsigned char' to signed type 'char' is implementation-defined
+clang-tidy	warning	Src/Utils.cpp	bugprone-narrowing-conversions	narrowing conversion from 'unsigned char' to signed type 'char' is implementation-defined
+clang-tidy	warning	Src/Utils.cpp	bugprone-narrowing-conversions	narrowing conversion from 'unsigned char' to signed type 'char' is implementation-defined
+clang-tidy	warning	Src/Utils.cpp	cert-dcl50-cpp	do not define a C-style variadic function; consider using a function parameter pack or currying instead
+clang-tidy	warning	Src/Utils.cpp	cert-dcl50-cpp	do not define a C-style variadic function; consider using a function parameter pack or currying instead
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	cert-err33-c	the value returned by this function should not be disregarded; neglecting it may lead to errors
+clang-tidy	warning	Src/Utils.cpp	clang-analyzer-security.insecureAPI.strcpy	Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119
+clang-tidy	warning	Src/Utils.cpp	clang-analyzer-unix.Stream	File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior
+clang-tidy	warning	Src/Utils.cpp	performance-move-const-arg	passing result of std::move() as a const reference argument; no move will actually happen
+clang-tidy	warning	Src/Utils.cpp	readability-misleading-indentation	misleading indentation: statement is indented too deeply
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-integer-division	result of integer division used in a floating point context; possible loss of precision
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-multi-level-implicit-pointer-conversion	multilevel pointer conversion from 'struct dirent **' to 'void *', please use explicit cast
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-multi-level-implicit-pointer-conversion	multilevel pointer conversion from 'struct dirent **' to 'void *', please use explicit cast
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-multi-level-implicit-pointer-conversion	multilevel pointer conversion from 'struct dirent **' to 'void *', please use explicit cast
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-multi-level-implicit-pointer-conversion	multilevel pointer conversion from 'struct dirent **' to 'void *', please use explicit cast
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from '__u32' (aka 'unsigned int') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from '__u32' (aka 'unsigned int') to signed type 'int' is implementation-defined
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'double' to 'int'
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'double' to 'int'
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'double' to 'int'
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'double' to 'int'
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'double' to 'int'
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	bugprone-narrowing-conversions	narrowing conversion from 'double' to 'int'
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	concurrency-mt-unsafe	function is not thread safe
+clang-tidy	warning	Src/WallpaperPrefsHandler.cpp	performance-unnecessary-value-param	the parameter 'wallpaperName' is copied for each invocation but only used as a const reference; consider making it a const reference
+clang-tidy	warning	tests/unit/TempDir.h	misc-no-recursion	function 'removeTree' is within a recursive call chain
+coccinelle	report	Src/PrefsFactory.cpp	ctype-plain-char	isspace() on a plain char: cast to unsigned char
+coccinelle	report	Src/TimePrefsHandler.cpp	ctype-plain-char	isspace() on a plain char: cast to unsigned char
+cppcheck	performance	Inc/BackupManager.h	passedByValue	Function parameter 'fileList' should be passed by const reference.
+cppcheck	performance	Inc/LocalePrefsHandler.h	returnByReference	Function 'currentRegion()' should return member 'm_regionCode' by const reference.
+cppcheck	performance	Src/BackupManager.cpp	passedByValue	Function parameter 'fileList' should be passed by const reference.
+cppcheck	performance	Src/Main.cpp	stlcstrParam	Passing the result of c_str() to a function that takes std::string as argument no. 1 is slow and redundant.
+cppcheck	performance	Src/PrefsDb.cpp	stlcstrParam	Passing the result of c_str() to a function that takes std::string as argument no. 1 is slow and redundant.
+cppcheck	performance	Src/PrefsDb.cpp	stlcstrParam	Passing the result of c_str() to a function that takes std::string as argument no. 1 is slow and redundant.
+cppcheck	performance	Src/PrefsDb.cpp	stlcstrParam	Passing the result of c_str() to a function that takes std::string as argument no. 2 is slow and redundant.
+cppcheck	performance	Src/PrefsFactory.cpp	passedByValue	Function parameter 'command' should be passed by const reference.
+cppcheck	performance	Src/TimePrefsHandler.cpp	passedByValue	Function parameter 'hrValue' should be passed by const reference.
+cppcheck	performance	Src/TimePrefsHandler.cpp	postfixOperator	Prefer prefix ++/-- operators for non-primitive types.
+cppcheck	performance	Src/TimePrefsHandler.cpp	postfixOperator	Prefer prefix ++/-- operators for non-primitive types.
+cppcheck	performance	Src/TimePrefsHandler.cpp	postfixOperator	Prefer prefix ++/-- operators for non-primitive types.
+cppcheck	performance	Src/TimePrefsHandler.cpp	stlcstrParam	Passing the result of c_str() to a function that takes std::string as argument no. 2 is slow and redundant.
+cppcheck	performance	Src/TimePrefsHandler.cpp	stlcstrParam	Passing the result of c_str() to a function that takes std::string as argument no. 2 is slow and redundant.
+cppcheck	performance	Src/WallpaperPrefsHandler.cpp	passedByValue	Function parameter 'wallpaperName' should be passed by const reference.
+cppcheck	portability	Src/TimeZoneService.cpp	localtimeCalled	Non reentrant function 'localtime' called. For threadsafe applications it is recommended to use the reentrant replacement function 'localtime_r'.
+cppcheck	portability	Src/TimeZoneService.cpp	localtimeCalled	Non reentrant function 'localtime' called. For threadsafe applications it is recommended to use the reentrant replacement function 'localtime_r'.
+cppcheck	portability	Src/TzParser.cpp	gmtimeCalled	Non reentrant function 'gmtime' called. For threadsafe applications it is recommended to use the reentrant replacement function 'gmtime_r'.
+cppcheck	portability	Src/TzParser.cpp	gmtimeCalled	Non reentrant function 'gmtime' called. For threadsafe applications it is recommended to use the reentrant replacement function 'gmtime_r'.
+cppcheck	style	Inc/ImageServices.h	functionConst	Technically the member function 'ImageServices::isValid' can be const.
+cppcheck	style	Inc/JSONUtils.h	knownConditionTrueFalse	Condition 'static_cast<T>(-1)<static_cast<T>(0)' is always true
+cppcheck	style	Inc/JSONUtils.h	knownConditionTrueFalse	Condition 'static_cast<long>(-1)<static_cast<long>(0)' is always true
+cppcheck	style	Inc/JSONUtils.h	knownConditionTrueFalse	Condition 'static_cast<time_t>(-1)<static_cast<time_t>(0)' is always true
+cppcheck	style	Inc/PrefsDb.h	noExplicitConstructor	Class 'PrefsDb' has a constructor with 1 argument that is not explicit.
+cppcheck	style	Inc/SystemRestore.h	functionConst	Technically the member function 'SystemRestore::getMSMState' can be const.
+cppcheck	style	Inc/TimePrefsHandler.h	functionConst	Technically the member function 'TimePrefsHandler::getDriftPeriod' can be const.
+cppcheck	style	Inc/TimePrefsHandler.h	functionConst	Technically the member function 'TimePrefsHandler::getLastNITZValidity' can be const.
+cppcheck	style	Inc/TimePrefsHandler.h	functionConst	Technically the member function 'TimePrefsHandler::isDriftPeriodDisabled' can be const.
+cppcheck	style	Inc/TimePrefsHandler.h	functionConst	Technically the member function 'TimePrefsHandler::isNITZDisabled' can be const.
+cppcheck	style	Inc/TimePrefsHandler.h	functionConst	Technically the member function 'TimePrefsHandler::isNITZTZEnabled' can be const.
+cppcheck	style	Inc/TimePrefsHandler.h	functionConst	Technically the member function 'TimePrefsHandler::isNITZTimeEnabled' can be const.
+cppcheck	style	Inc/Utils.h	noExplicitConstructor	Class 'gstring' has a constructor with 1 argument that is not explicit.
+cppcheck	style	Src/BackupManager.cpp	functionConst	Technically the member function 'BackupManager::sendPreBackupResponse' can be const.
+cppcheck	style	Src/BackupManager.cpp	functionStatic	The member function 'BackupManager::sendPostRestoreResponse' can be static.
+cppcheck	style	Src/BackupManager.cpp	functionStatic	The member function 'BackupManager::setServiceHandle' can be static.
+cppcheck	style	Src/BackupManager.cpp	knownConditionTrueFalse	Return value 'BackupManager::instance()->sendPostRestoreResponse(lshandle,message)' is always true
+cppcheck	style	Src/BackupManager.cpp	knownConditionTrueFalse	Return value 'self->sendPreBackupResponse(lshandle,message,self->m_backupFiles)' is always true
+cppcheck	style	Src/BackupManager.cpp	knownConditionTrueFalse	Return value 'self->sendPreBackupResponse(lshandle,message,std::list<std::string>())' is always true
+cppcheck	style	Src/BackupManager.cpp	knownConditionTrueFalse	Return value 'self->sendPreBackupResponse(lshandle,message,std::list<std::string>())' is always true
+cppcheck	style	Src/BroadcastTimeHandler.cpp	constVariableReference	Variable 'broadcastTime' can be declared as reference to const
+cppcheck	style	Src/BroadcastTimeHandler.cpp	constVariableReference	Variable 'broadcastTime' can be declared as reference to const
+cppcheck	style	Src/BroadcastTimeHandler.cpp	funcArgNamesDifferent	Function 'cbGetBroadcastTime' argument 1 names different: declaration 'lsHandle' definition 'handle'.
+cppcheck	style	Src/BroadcastTimeHandler.cpp	funcArgNamesDifferent	Function 'cbGetEffectiveBroadcastTime' argument 1 names different: declaration 'lsHandle' definition 'handle'.
+cppcheck	style	Src/BroadcastTimeHandler.cpp	funcArgNamesDifferent	Function 'cbSetBroadcastTime' argument 1 names different: declaration 'lsHandle' definition 'handle'.
+cppcheck	style	Src/BuildInfoHandler.cpp	functionStatic	The member function 'BuildInfoHandler::init' can be static.
+cppcheck	style	Src/ClockHandler.cpp	funcArgNamesDifferent	Function 'compensateSuspendedTimeToClocks' argument 2 names different: declaration 'timeStamp' definition 'timestamp'.
+cppcheck	style	Src/ClockHandler.cpp	shadowFunction	Local variable 'manualOverride' shadows outer function
+cppcheck	style	Src/DeviceInfoService.cpp	funcArgNamesDifferent	Function 'cbGetDeviceInformation' argument 1 names different: declaration 'lshandle' definition 'lsHandle'.
+cppcheck	style	Src/DeviceInfoService.cpp	functionStatic	The member function 'DeviceInfoService::setServiceHandle' can be static.
+cppcheck	style	Src/ImageServices.cpp	functionStatic	The member function 'ImageServices::convertImage' can be static.
+cppcheck	style	Src/ImageServices.cpp	functionStatic	The member function 'ImageServices::convertImage' can be static.
+cppcheck	style	Src/ImageServices.cpp	functionStatic	The member function 'ImageServices::ezResize' can be static.
+cppcheck	style	Src/JSONUtils.cpp	funcArgNamesDifferent	Function 'parse' argument 2 names different: declaration 'sender' definition 'lssender'.
+cppcheck	style	Src/JSONUtils.cpp	funcArgNamesDifferent	Function 'parse' argument 3 names different: declaration 'errOption' definition 'validationOption'.
+cppcheck	style	Src/LocalePrefsHandler.cpp	functionConst	Technically the member function 'LocalePrefsHandler::validateLocale' can be const.
+cppcheck	style	Src/LocalePrefsHandler.cpp	functionConst	Technically the member function 'LocalePrefsHandler::validateRegion' can be const.
+cppcheck	style	Src/LocalePrefsHandler.cpp	functionConst	Technically the member function 'LocalePrefsHandler::valuesForLocale' can be const.
+cppcheck	style	Src/LocalePrefsHandler.cpp	functionConst	Technically the member function 'LocalePrefsHandler::valuesForRegion' can be const.
+cppcheck	style	Src/LocalePrefsHandler.cpp	functionStatic	The member function 'LocalePrefsHandler::valueChangedLocale' can be static.
+cppcheck	style	Src/LocalePrefsHandler.cpp	functionStatic	The member function 'LocalePrefsHandler::valueChangedRegion' can be static.
+cppcheck	style	Src/NetworkConnectionListener.cpp	functionStatic	The member function 'NetworkConnectionListener::connectionManagerConnectCallback' can be static.
+cppcheck	style	Src/NetworkConnectionListener.cpp	knownConditionTrueFalse	Return value 'NetworkConnectionListener::instance()->connectionManagerConnectCallback(sh,serviceName,connected)' is always true
+cppcheck	style	Src/NetworkConnectionListener.cpp	knownConditionTrueFalse	Return value 'NetworkConnectionListener::instance()->connectionManagerGetStatusCallback(sh,message)' is always true
+cppcheck	style	Src/NetworkConnectionListener.cpp	shadowFunction	Local variable 'isInternetConnectionAvailable' shadows outer function
+cppcheck	style	Src/OsInfoService.cpp	funcArgNamesDifferent	Function 'cbGetOsInformation' argument 1 names different: declaration 'lshandle' definition 'lsHandle'.
+cppcheck	style	Src/OsInfoService.cpp	functionStatic	The member function 'OsInfoService::setServiceHandle' can be static.
+cppcheck	style	Src/PrefsDb.cpp	constParameterPointer	Parameter 'p_sourceDb' can be declared as pointer to const
+cppcheck	style	Src/PrefsDb.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/PrefsDb.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/PrefsDb.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/PrefsDb.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/PrefsDb.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/PrefsDb.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/PrefsDb.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/PrefsDb.cpp	funcArgNamesDifferent	Function 'copyKeys' argument 3 names different: declaration 'overwriteSame' definition 'overwriteSameKeys'.
+cppcheck	style	Src/PrefsFactory.cpp	funcArgNamesDifferent	Function 'postPrefChange' argument 1 names different: declaration 'key' definition 'keyStr'.
+cppcheck	style	Src/PrefsFactory.cpp	funcArgNamesDifferent	Function 'postPrefChange' argument 2 names different: declaration 'value' definition 'valueStr'.
+cppcheck	style	Src/PrefsFactory.cpp	funcArgNamesDifferent	Function 'postPrefChangeValueIsCompleteString' argument 1 names different: declaration 'key' definition 'keyStr'.
+cppcheck	style	Src/PrefsFactory.cpp	variableScope	The scope of the variable 'lsHandle' can be reduced.
+cppcheck	style	Src/PrefsFactory.cpp	variableScope	The scope of the variable 'lsHandle' can be reduced.
+cppcheck	style	Src/RingtonePrefsHandler.cpp	unreadVariable	Variable 'rc' is assigned a value that is never used.
+cppcheck	style	Src/RingtonePrefsHandler.cpp	unreadVariable	Variable 'rc' is assigned a value that is never used.
+cppcheck	style	Src/RingtonePrefsHandler.cpp	variableScope	The scope of the variable 'rc' can be reduced.
+cppcheck	style	Src/RingtonePrefsHandler.cpp	variableScope	The scope of the variable 'rc' can be reduced.
+cppcheck	style	Src/RingtonePrefsHandler.cpp	variableScope	The scope of the variable 'urlRep' can be reduced.
+cppcheck	style	Src/SystemRestore.cpp	constParameterPointer	Parameter 'message' can be declared as pointer to const
+cppcheck	style	Src/SystemRestore.cpp	functionStatic	The member function 'SystemRestore::isRingtoneSettingConsistent' can be static.
+cppcheck	style	Src/SystemRestore.cpp	functionStatic	The member function 'SystemRestore::msmAvail' can be static.
+cppcheck	style	Src/SystemRestore.cpp	functionStatic	The member function 'SystemRestore::msmFscking' can be static.
+cppcheck	style	Src/SystemRestore.cpp	functionStatic	The member function 'SystemRestore::msmPartitionAvailable' can be static.
+cppcheck	style	Src/SystemRestore.cpp	functionStatic	The member function 'SystemRestore::msmProgress' can be static.
+cppcheck	style	Src/SystemRestore.cpp	knownConditionTrueFalse	Return value 'SystemRestore::instance()->msmFscking(message)' is always true
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterCallback	Parameter 'pTimePrefsHandler' can be declared as pointer to const. However it seems that 'validateFor_timeChangeLaunch' is a callback function, if 'pTimePrefsHandler' is declared with const you might also need to cast function pointer(s).
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterCallback	Parameter 'pTimePrefsHandler' can be declared as pointer to const. However it seems that 'validateFor_useNetworkTimeZone' is a callback function, if 'pTimePrefsHandler' is declared with const you might also need to cast function pointer(s).
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'flags' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'flags' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'flags' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'flags' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'flags' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'flags' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'flags' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'flags' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'nitz' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'nitz' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'nitz' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'nitz' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'r_statusMgs' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'r_statusMsg' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'r_statusMsg' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'r_statusMsg' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'r_statusMsg' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'r_statusMsg' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'r_statusMsg' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'r_statusMsg' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'r_statusMsg' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constParameterReference	Parameter 'timeStruct' can be declared as reference to const
+cppcheck	style	Src/TimePrefsHandler.cpp	constVariablePointer	Variable 'bad_char' can be declared as pointer to const
+cppcheck	style	Src/TimePrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TimePrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TimePrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TimePrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TimePrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TimePrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TimePrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TimePrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TimePrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TimePrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TimePrefsHandler.cpp	funcArgNamesDifferent	Function 'cbConvertDate' argument 1 names different: declaration 'lsHandle' definition 'pHandle'.
+cppcheck	style	Src/TimePrefsHandler.cpp	funcArgNamesDifferent	Function 'cbConvertDate' argument 2 names different: declaration 'message' definition 'pMessage'.
+cppcheck	style	Src/TimePrefsHandler.cpp	funcArgNamesDifferent	Function 'valid' argument 1 names different: declaration 'timeThreshold' definition 'threshold'.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionConst	Technically the member function 'TimePrefsHandler::attachSystemTime' can be const.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionConst	Technically the member function 'TimePrefsHandler::timeZone_GetDefaultZoneFailsafe' can be const.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionConst	Technically the member function 'TimePrefsHandler::timeoutNitzHandlerEntry' can be const.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionConst	Technically the member function 'TimePrefsHandler::updateTimeZoneEnv' can be const.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'NitzParameters::valid' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::enableNetworkTimeSync' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::isCountryAcrossMultipleTimeZones' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::isNTPAllowed' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::isValidTimeZoneName' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::nitzHandlerDstValue' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::nitzHandlerEntry' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::nitzHandlerExit' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::nitzHandlerSpecialCaseOffsetValue' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::offsetToUtcSecs' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::timeZoneListAsJson' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::timeZoneListAsJson' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::timeoutNitzHandlerDstValue' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	functionStatic	The member function 'TimePrefsHandler::timeoutNitzHandlerExit' can be static.
+cppcheck	style	Src/TimePrefsHandler.cpp	knownConditionTrueFalse	Condition 'nitz.valid()==false' is always false
+cppcheck	style	Src/TimePrefsHandler.cpp	unreadVariable	Variable 'retVal' is assigned a value that is never used.
+cppcheck	style	Src/TimePrefsHandler.cpp	useStlAlgorithm	Consider using std::any_of algorithm instead of a raw loop.
+cppcheck	style	Src/TimePrefsHandler.cpp	useStlAlgorithm	Consider using std::any_of algorithm instead of a raw loop.
+cppcheck	style	Src/TimeZoneService.cpp	constParameterPointer	Parameter 'ap_userTz' can be declared as pointer to const
+cppcheck	style	Src/TimeZoneService.cpp	constParameterReference	Parameter 'endTime' can be declared as reference to const
+cppcheck	style	Src/TimeZoneService.cpp	constParameterReference	Parameter 'startTime' can be declared as reference to const
+cppcheck	style	Src/TimeZoneService.cpp	constVariablePointer	Variable 'localTime' can be declared as pointer to const
+cppcheck	style	Src/TimeZoneService.cpp	constVariablePointer	Variable 'localTime' can be declared as pointer to const
+cppcheck	style	Src/TimeZoneService.cpp	funcArgNamesDifferent	Function 'cbCreateTimeZoneFromEasData' argument 1 names different: declaration 'lshandle' definition 'lsHandle'.
+cppcheck	style	Src/TimeZoneService.cpp	funcArgNamesDifferent	Function 'cbGetTimeZoneFromEasData' argument 1 names different: declaration 'lshandle' definition 'lsHandle'.
+cppcheck	style	Src/TimeZoneService.cpp	funcArgNamesDifferent	Function 'cbGetTimeZoneRules' argument 1 names different: declaration 'lshandle' definition 'lsHandle'.
+cppcheck	style	Src/TimeZoneService.cpp	funcArgNamesDifferent	Function 'createTimeZoneFromEasData' argument 2 names different: declaration 'a_userTz' definition 'ap_userTz'.
+cppcheck	style	Src/TimeZoneService.cpp	funcArgNamesDifferent	Function 'readTimeZoneRule' argument 2 names different: declaration 'time' definition 'tzrule'.
+cppcheck	style	Src/TimeZoneService.cpp	functionStatic	The member function 'TimeZoneService::createTimeZoneFromEasData' can be static.
+cppcheck	style	Src/TimeZoneService.cpp	functionStatic	The member function 'TimeZoneService::getTimeZoneRuleOne' can be static.
+cppcheck	style	Src/TimeZoneService.cpp	functionStatic	The member function 'TimeZoneService::nextTzTransition' can be static.
+cppcheck	style	Src/TimeZoneService.cpp	functionStatic	The member function 'TimeZoneService::setServiceHandle' can be static.
+cppcheck	style	Src/TimeZoneService.cpp	shadowVariable	Local variable 'daysIndex' shadows outer variable
+cppcheck	style	Src/TimeZoneService.cpp	shadowVariable	Local variable 'daysIndex' shadows outer variable
+cppcheck	style	Src/TimeZoneService.cpp	unreadVariable	Variable 'ret' is assigned a value that is never used.
+cppcheck	style	Src/TzParser.cpp	asctimeCalled	Obsolete function 'asctime' called. It is recommended to use 'strftime' instead.
+cppcheck	style	Src/TzParser.cpp	constVariablePointer	Variable 'gmTime' can be declared as pointer to const
+cppcheck	style	Src/TzParser.cpp	constVariablePointer	Variable 'head' can be declared as pointer to const
+cppcheck	style	Src/TzParser.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/TzParser.cpp	variableScope	The scope of the variable 'charCnt' can be reduced.
+cppcheck	style	Src/TzParser.cpp	variableScope	The scope of the variable 'gmtCnt' can be reduced.
+cppcheck	style	Src/TzParser.cpp	variableScope	The scope of the variable 'leapCnt' can be reduced.
+cppcheck	style	Src/TzParser.cpp	variableScope	The scope of the variable 'stdCnt' can be reduced.
+cppcheck	style	Src/TzParser.cpp	variableScope	The scope of the variable 'typeCnt' can be reduced.
+cppcheck	style	Src/UrlRep.cpp	constVariablePointer	Variable 'term' can be declared as pointer to const
+cppcheck	style	Src/Utils.cpp	funcArgNamesDifferent	Function 'base64_decode' argument 1 names different: declaration 's' definition 'encoded_string'.
+cppcheck	style	Src/Utils.cpp	funcArgNamesDifferent	Function 'base64_encode' argument 2 names different: declaration 'len' definition 'in_len'.
+cppcheck	style	Src/Utils.cpp	funcArgNamesDifferent	Function 'getNthSubstring' argument 2 names different: declaration 'target' definition 'dest'.
+cppcheck	style	Src/Utils.cpp	variableScope	The scope of the variable 'extracted' can be reduced.
+cppcheck	style	Src/Utils.cpp	variableScope	The scope of the variable 'extracted' can be reduced.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	constParameterReference	Parameter 'image' can be declared as reference to const
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	constParameterReference	Parameter 'image' can be declared as reference to const
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	cstyleCast	C-style pointer casting
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	funcArgNamesDifferent	Function 'importWallpaperViaImage2' argument 1 names different: declaration 'imageSourceUrl' definition 'imageFilepath'.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	funcArgNamesDifferent	Function 'importWallpaperViaImage2' argument 2 names different: declaration 'centerX' definition 'focusX'.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	funcArgNamesDifferent	Function 'importWallpaperViaImage2' argument 3 names different: declaration 'centerY' definition 'focusY'.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	functionStatic	The member function 'WallpaperPrefsHandler::clipImageToScreenSize' can be static.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	functionStatic	The member function 'WallpaperPrefsHandler::clipImageToScreenSizeWithFocus' can be static.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	functionStatic	The member function 'WallpaperPrefsHandler::getScreenDimensions' can be static.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	functionStatic	The member function 'WallpaperPrefsHandler::resizeImage' can be static.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	unusedPrivateFunction	Unused private function: 'WallpaperPrefsHandler::clipImageToScreenSize'
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	useStlAlgorithm	Consider using std::any_of algorithm instead of a raw loop.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	useStlAlgorithm	Consider using std::find_if algorithm instead of a raw loop.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	useStlAlgorithm	Consider using std::find_if algorithm instead of a raw loop.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	variableScope	The scope of the variable 'c' can be reduced.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	variableScope	The scope of the variable 'fx' can be reduced.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	variableScope	The scope of the variable 'fy' can be reduced.
+cppcheck	style	Src/WallpaperPrefsHandler.cpp	variableScope	The scope of the variable 'scaleFactor' can be reduced.
+cppcheck	style	tests/unit/test_tzparser.cpp	useStlAlgorithm	Consider using std::find_if algorithm instead of a raw loop.
+cppcheck	warning	Src/NTPClock.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/NTPClock.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/NTPClock.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/NTPClock.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/NTPClock.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/Settings.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/Settings.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/TimePrefsHandler.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/TimePrefsHandler.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/TimeZoneService.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/TimeZoneService.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/TimeZoneService.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/TzParser.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/WallpaperPrefsHandler.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/WallpaperPrefsHandler.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+cppcheck	warning	Src/WallpaperPrefsHandler.cpp	dangerousTypeCast	Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+flawfinder	level-1	Src/ImageHelpers.cpp	buffer/read	Check buffer boundaries if used in a loop including recursive loops (CWE-120, CWE-20).
+flawfinder	level-1	Src/ImageServices.cpp	buffer/read	Check buffer boundaries if used in a loop including recursive loops (CWE-120, CWE-20).
+flawfinder	level-1	Src/ImageServices.cpp	buffer/read	Check buffer boundaries if used in a loop including recursive loops (CWE-120, CWE-20).
+flawfinder	level-1	Src/ImageServices.cpp	buffer/read	Check buffer boundaries if used in a loop including recursive loops (CWE-120, CWE-20).
+flawfinder	level-1	Src/TimePrefsHandler.cpp	buffer/strlen	Does not handle strings that are not \0-terminated; if given one it may perform an over-read (it could cause a crash if unprotected) (CWE-126).
+flawfinder	level-1	Src/UrlRep.cpp	buffer/strlen	Does not handle strings that are not \0-terminated; if given one it may perform an over-read (it could cause a crash if unprotected) (CWE-126).
+flawfinder	level-1	Src/Utils.cpp	access/umask	Ensure that umask is given most restrictive possible setting (e.g., 066 or 077) (CWE-732).
+flawfinder	level-1	Src/Utils.cpp	access/umask	Ensure that umask is given most restrictive possible setting (e.g., 066 or 077) (CWE-732).
+flawfinder	level-1	tests/unit/TempDir.h	buffer/read	Check buffer boundaries if used in a loop including recursive loops (CWE-120, CWE-20).
+flawfinder	level-1	tests/unit/test_tzparser.cpp	buffer/strlen	Does not handle strings that are not \0-terminated; if given one it may perform an over-read (it could cause a crash if unprotected) (CWE-126).
+flawfinder	level-1	tests/unit/test_utils.cpp	buffer/read	Check buffer boundaries if used in a loop including recursive loops (CWE-120, CWE-20).
+flawfinder	level-1	tests/unit/test_utils.cpp	buffer/read	Check buffer boundaries if used in a loop including recursive loops (CWE-120, CWE-20).
+flawfinder	level-1	tests/unit/test_utils.cpp	buffer/strlen	Does not handle strings that are not \0-terminated; if given one it may perform an over-read (it could cause a crash if unprotected) (CWE-126).
+flawfinder	level-2	Src/BuildInfoHandler.cpp	misc/fopen	Check when opening files - can an attacker redirect it (via symlinks), force the opening of special file type (e.g., device files), move things around to create a race condition, control its ancestors, or change its contents? (CWE-362).
+flawfinder	level-2	Src/SystemRestore.cpp	misc/fopen	Check when opening files - can an attacker redirect it (via symlinks), force the opening of special file type (e.g., device files), move things around to create a race condition, control its ancestors, or change its contents? (CWE-362).
+flawfinder	level-2	Src/TimePrefsHandler.cpp	buffer/memcpy	Does not check for buffer overflows when copying to destination (CWE-120).  Make sure destination can always hold the source data.
+flawfinder	level-2	Src/TimeZoneService.cpp	misc/fopen	Check when opening files - can an attacker redirect it (via symlinks), force the opening of special file type (e.g., device files), move things around to create a race condition, control its ancestors, or change its contents? (CWE-362).
+flawfinder	level-2	Src/TzParser.cpp	misc/fopen	Check when opening files - can an attacker redirect it (via symlinks), force the opening of special file type (e.g., device files), move things around to create a race condition, control its ancestors, or change its contents? (CWE-362).
+flawfinder	level-2	Src/TzParser.cpp	misc/fopen	Check when opening files - can an attacker redirect it (via symlinks), force the opening of special file type (e.g., device files), move things around to create a race condition, control its ancestors, or change its contents? (CWE-362).
+flawfinder	level-2	Src/Utils.cpp	misc/fopen	Check when opening files - can an attacker redirect it (via symlinks), force the opening of special file type (e.g., device files), move things around to create a race condition, control its ancestors, or change its contents? (CWE-362).
+flawfinder	level-2	Src/Utils.cpp	misc/fopen	Check when opening files - can an attacker redirect it (via symlinks), force the opening of special file type (e.g., device files), move things around to create a race condition, control its ancestors, or change its contents? (CWE-362).
+flawfinder	level-2	Src/Utils.cpp	misc/fopen	Check when opening files - can an attacker redirect it (via symlinks), force the opening of special file type (e.g., device files), move things around to create a race condition, control its ancestors, or change its contents? (CWE-362).
+flawfinder	level-2	Src/Utils.cpp	misc/fopen	Check when opening files - can an attacker redirect it (via symlinks), force the opening of special file type (e.g., device files), move things around to create a race condition, control its ancestors, or change its contents? (CWE-362).
+flawfinder	level-2	Src/Utils.cpp	tmpfile/mkstemp	Potential for temporary file vulnerability in some circumstances.  Some older Unix-like systems create temp files with permission to write by all by default, so be sure to set the umask to override this. Also, some older Unix systems might fail to use O_EXCL when opening the file, so make sure that O_EXCL is used by the library (CWE-377).
+flawfinder	level-2	Src/WallpaperPrefsHandler.cpp	misc/open	Check when opening files - can an attacker redirect it (via symlinks), force the opening of special file type (e.g., device files), move things around to create a race condition, control its ancestors, or change its contents? (CWE-362).
+flawfinder	level-3	Src/TimePrefsHandler.cpp	buffer/getenv	Environment variables are untrustable input if they can be set by an attacker.  They can have any content and length, and the same variable can be set more than once (CWE-807, CWE-20).  Check environment variables carefully before using them.
+flawfinder	level-3	Src/TimePrefsHandler.cpp	buffer/getenv	Environment variables are untrustable input if they can be set by an attacker.  They can have any content and length, and the same variable can be set more than once (CWE-807, CWE-20).  Check environment variables carefully before using them.
+flawfinder	level-3	Src/TimeZoneService.cpp	buffer/getenv	Environment variables are untrustable input if they can be set by an attacker.  They can have any content and length, and the same variable can be set more than once (CWE-807, CWE-20).  Check environment variables carefully before using them.
+flawfinder	level-3	Src/Utils.cpp	random/g_random_int	This function is not sufficiently random for security-related functions such as key and nonce creation (CWE-327).  Use a more secure technique for acquiring random values.
+flawfinder	level-3	Src/Utils.cpp	random/g_random_int	This function is not sufficiently random for security-related functions such as key and nonce creation (CWE-327).  Use a more secure technique for acquiring random values.
+flawfinder	level-4	Src/Logging.cpp	format/vsnprintf	If format strings can be influenced by an attacker, they can be exploited, and note that sprintf variations do not always \0-terminate (CWE-134).  Use a constant for the format specification.
+flawfinder	level-4	Src/Logging.cpp	format/vsnprintf	If format strings can be influenced by an attacker, they can be exploited, and note that sprintf variations do not always \0-terminate (CWE-134).  Use a constant for the format specification.
+flawfinder	level-4	Src/PrefsFactory.cpp	shell/popen	This causes a new program to execute and is difficult to use safely (CWE-78).  try using a library call that implements the same functionality if available.
+flawfinder	level-4	Src/TimePrefsHandler.cpp	race/access	This usually indicates a security flaw.  If an attacker can change anything along the path between the call to access() and the file's actual use (e.g., by moving files), the attacker can exploit the race condition (CWE-362/CWE-367!).  Set up the correct permissions (e.g., using setuid()) and try to open the file directly.
+flawfinder	level-4	Src/TzParser.cpp	format/printf	If format strings can be influenced by an attacker, they can be exploited (CWE-134).  Use a constant for the format specification.
+flawfinder	level-4	Src/UrlRep.cpp	buffer/strcpy	Does not check for buffer overflows when copying to destination [MS-banned] (CWE-120).  Consider using snprintf, strcpy_s, or strlcpy (warning: strncpy easily misused).
+flawfinder	level-4	Src/Utils.cpp	buffer/strcpy	Does not check for buffer overflows when copying to destination [MS-banned] (CWE-120).  Consider using snprintf, strcpy_s, or strlcpy (warning: strncpy easily misused).
+flawfinder	level-4	Src/Utils.cpp	format/vprintf	If format strings can be influenced by an attacker, they can be exploited (CWE-134).  Use a constant for the format specification.
+flawfinder	level-4	Src/Utils.cpp	format/vsnprintf	If format strings can be influenced by an attacker, they can be exploited, and note that sprintf variations do not always \0-terminate (CWE-134).  Use a constant for the format specification.
+flawfinder	level-4	Src/Utils.cpp	format/vsnprintf	If format strings can be influenced by an attacker, they can be exploited, and note that sprintf variations do not always \0-terminate (CWE-134).  Use a constant for the format specification.
+gcc -fanalyzer -O0	warning	Src/BackupManager.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/BuildInfoHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/DeviceInfoService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/ImageServices.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/JSONUtils.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/LocalePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/Logging.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/NTPClock.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/NetworkConnectionListener.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/OsInfoService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/PrefsDb.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/PrefsFactory.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/RingtonePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/Settings.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/SystemRestore.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O0	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/UrlRep.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/Utils.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/WallpaperPrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_json.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_prefsdb.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_tzparser.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_urlrep.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_utils.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Inc/LocalePrefsHandler.h	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 401 stmt: 0):  if (_139 != -1)EN: 12395-12396, EN: 12403, EN: 12409, EN: 12417, EN: 12425, EN: 12433, EN: 12440
+gcc -fanalyzer -O2	warning	Inc/Singleton.h	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4823 -> SN: 60 in TimePrefsHandler::_ZN16TimePrefsHandler22nitzHandlerOffsetValueER14NitzParametersRiRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE.part.0), (SN: 1673 -> SN: 4810 in TimePrefsHandler::setTimeZone)] before (SN: 1671 stmt: 0):  _9 = object;EN: 57123-57124, EN: 57151-57152, EN: 57179-57180, EN: 59173-59174
+gcc -fanalyzer -O2	warning	Inc/Singleton.h	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4823 -> SN: 70 in TimePrefsHandler::_ZN16TimePrefsHandler22nitzHandlerOffsetValueER14NitzParametersRiRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE.part.0), (SN: 1673 -> SN: 4810 in TimePrefsHandler::setTimeZone)] before (SN: 1671 stmt: 0):  _9 = object;EN: 63531-63532, EN: 63559-63560, EN: 63587-63588, EN: 65626-65627
+gcc -fanalyzer -O2	warning	Src/BroadcastTimeHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/ClockHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/DeviceInfoService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/LocalePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/LocalePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 451 stmt: 0):  D.101988 ={v} {CLOBBER(eos)};EN: 14393-14395, EN: 14520, EN: 14564, EN: 14608, EN: 14652, EN: 14696
+gcc -fanalyzer -O2	warning	Src/LocalePrefsHandler.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/LocalePrefsHandler.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/Main.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/NTPClock.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/NetworkConnectionListener.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/OsInfoService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/PrefsDb.cpp	-Wanalyzer-too-complex	analysis bailed out early (6126 'after-snode' enodes; 18663 enodes)
+gcc -fanalyzer -O2	warning	Src/PrefsDb.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/PrefsDb.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/PrefsFactory.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/PrefsFactory.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 854 stmt: 0):  LS::Error::~Error (&error);EN: 25252-25254, EN: 25398-25400, EN: 25545-25546
+gcc -fanalyzer -O2	warning	Src/RingtonePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/SystemRestore.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4770 -> SN: 20 in TimePrefsHandler::_ZN16TimePrefsHandler29applyAlternativeFactorySourceEv.part.0), (SN: 4671 -> SN: 4761 in TimePrefsHandler::systemSetTime), (SN: 4617 -> SN: 4638 in TimePrefsHandler::postSystemTimeChange)] before (SN: 4546 stmt: 0):  if (&D.221965 == _14)EN: 29645, EN: 29651, EN: 29658, EN: 29665, EN: 29672, EN: 29679, EN: 29686, EN: 29693
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4770 -> SN: 20 in TimePrefsHandler::_ZN16TimePrefsHandler29applyAlternativeFactorySourceEv.part.0), (SN: 4671 -> SN: 4761 in TimePrefsHandler::systemSetTime), (SN: 4617 -> SN: 4638 in TimePrefsHandler::postSystemTimeChange)] before (SN: 4595 stmt: 0):  if (&D.221965 == _15)EN: 33223-33225, EN: 33239, EN: 33246, EN: 33253, EN: 33260, EN: 33267
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4770 -> SN: 20 in TimePrefsHandler::_ZN16TimePrefsHandler29applyAlternativeFactorySourceEv.part.0), (SN: 4671 -> SN: 4761 in TimePrefsHandler::systemSetTime), (SN: 4617 -> SN: 4638 in TimePrefsHandler::postSystemTimeChange)] before (SN: 4599 stmt: 0):  if (&D.221965 == _17)EN: 33322-33329
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4823 -> SN: 70 in TimePrefsHandler::_ZN16TimePrefsHandler22nitzHandlerOffsetValueER14NitzParametersRiRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE.part.0)] before (SN: 4790 stmt: 0):  _5 = &pZoneInfo_18->name;EN: 62849-62851, EN: 65085, EN: 65746-65748, EN: 66322
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4823 -> SN: 70 in TimePrefsHandler::_ZN16TimePrefsHandler22nitzHandlerOffsetValueER14NitzParametersRiRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE.part.0)] before (SN: 4809 stmt: 0):  this_60(D)->m_cpCurrentTimeZone = pZoneInfo_19;EN: 63510-63512, EN: 65605-65607, EN: 66257-66258
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 69 stmt: 0):  TimePrefsHandler::setTimeZone (this_6(D), selectedZone_19);EN: 62807-62814
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-file-leak	leak of FILE 'fopen(usrDefinedTZFilePath, "wb")' [CWE-775]
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-file-leak	leak of FILE 'fopen(usrDefinedTZFilePath, "wb")' [CWE-775]
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-malloc-leak	leak of 'fopen(usrDefinedTZFilePath, "wb")' [CWE-401]
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-malloc-leak	leak of 'fopen(usrDefinedTZFilePath, "wb")' [CWE-401]
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	analysis bailed out early (5876 'after-snode' enodes; 17705 enodes)
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 336 -> SN: 359 in TimeZoneService::createManualTimeZone)] before (SN: 327 stmt: 0):  _1 = entry_23(D)->dayOfWeek;EN: 4910, EN: 5307-5308, EN: 5816-5817, EN: 5899, EN: 6343-6344
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 336 -> SN: 361 in TimeZoneService::createManualTimeZone)] before (SN: 327 stmt: 0):  _1 = entry_23(D)->dayOfWeek;EN: 4986, EN: 5047, EN: 5401, EN: 5462-5463, EN: 5959, EN: 6013, EN: 6466
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 663 -> SN: 600 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 388 -> SN: 640 in TimeZoneService::createTimeZoneFromEasData), (SN: 336 -> SN: 359 in TimeZoneService::createManualTimeZone)] before (SN: 327 stmt: 0):  _1 = entry_23(D)->dayOfWeek;EN: 12804-12805, EN: 12927-12928, EN: 13790-13791, EN: 13845-13846
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 663 -> SN: 600 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 388 -> SN: 640 in TimeZoneService::createTimeZoneFromEasData), (SN: 336 -> SN: 359 in TimeZoneService::createManualTimeZone)] before (SN: 331 stmt: 0):  _7 = entry_23(D)->month;EN: 12830-12833, EN: 12953-12956
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 663 -> SN: 600 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 388 -> SN: 640 in TimeZoneService::createTimeZoneFromEasData), (SN: 336 -> SN: 361 in TimeZoneService::createManualTimeZone)] before (SN: 327 stmt: 0):  _1 = entry_23(D)->dayOfWeek;EN: 13078-13079, EN: 13199, EN: 13287, EN: 13341, EN: 13374, EN: 13413, EN: 13450
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 663 -> SN: 600 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 388 -> SN: 640 in TimeZoneService::createTimeZoneFromEasData), (SN: 336 -> SN: 361 in TimeZoneService::createManualTimeZone)] before (SN: 331 stmt: 0):  _7 = entry_23(D)->month;EN: 13104-13107, EN: 13213-13215, EN: 13301
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 663 -> SN: 600 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 388 -> SN: 640 in TimeZoneService::createTimeZoneFromEasData)] after SN: 383EN: 14681-14688
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 663 -> SN: 600 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 388 -> SN: 640 in TimeZoneService::createTimeZoneFromEasData)] before (SN: 363 stmt: 0):  if (i_23 != 25)EN: 11967-11968, EN: 13525, EN: 13870, EN: 13887, EN: 13904, EN: 13921, EN: 14247
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 663 -> SN: 600 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 388 -> SN: 640 in TimeZoneService::createTimeZoneFromEasData)] before (SN: 364 stmt: 0):  _10 = a_userTz_42(D)->easBias;EN: 14265-14272
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 663 -> SN: 600 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 976 -> SN: 632 in TimeZoneService::createTimeZoneFromEasData), (SN: 868 -> SN: 961 in TimeZoneService::getTimeZoneBaseOffset)] before (SN: 839 stmt: 0):  if (&MEM[(struct _List_node_header *)&transitionList].D.80596 != iter$_M_node_63)EN: 8898, EN: 8923, EN: 8947, EN: 8969, EN: 9329, EN: 9353, EN: 9375, EN: 9715
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-file-leak	leak of FILE 'fopen(filePath.std::__cxx11::basic_string<char>::_M_dataplus.std::__cxx11::basic_string<char>::_Alloc_hider::_M_p, "r")' [CWE-775]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-file-leak	leak of FILE 'fopen(filePath.std::__cxx11::basic_string<char>::_M_dataplus.std::__cxx11::basic_string<char>::_Alloc_hider::_M_p, "r")' [CWE-775]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-malloc-leak	leak of 'fopen(filePath.std::__cxx11::basic_string<char>::_M_dataplus.std::__cxx11::basic_string<char>::_Alloc_hider::_M_p, "r")' [CWE-401]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-malloc-leak	leak of 'fopen(filePath.std::__cxx11::basic_string<char>::_M_dataplus.std::__cxx11::basic_string<char>::_Alloc_hider::_M_p, "r")' [CWE-401]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-null-dereference	dereference of NULL '0' [CWE-476]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-null-dereference	dereference of NULL '0' [CWE-476]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-null-dereference	dereference of NULL '0' [CWE-476]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 332 stmt: 0):  if (i_323 != 4)EN: 2906-2908, EN: 2916, EN: 2922, EN: 2928, EN: 6675, EN: 6681
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 378 stmt: 0):  if (i_343 != 4)EN: 4581-4588
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 394 stmt: 0):  if (i_369 != 4)EN: 4765-4772
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 403 stmt: 0):  if (i_113 < _296)EN: 4837-4844
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 408 stmt: 0):  if (i_114 < _332)EN: 6351-6357, EN: 6370
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 411 stmt: 0):  if (i_115 < _272)EN: 6421-6427, EN: 6440
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 414 stmt: 0):  if (i_116 < _284)EN: 6490-6496, EN: 6509
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 422 stmt: 0):  if (stored_108 <= 8)EN: 2847-2849, EN: 6658, EN: 7004, EN: 7022, EN: 7040, EN: 7058
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/UrlRep.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/Utils.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/Utils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/Utils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/Utils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/Utils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
