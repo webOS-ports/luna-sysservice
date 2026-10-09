@@ -147,6 +147,9 @@ endif()
 webos_build_system_bus_files()
 webos_build_daemon()
 
+webos_test_provider()
+add_subdirectory(tests)
+
 install(FILES files/conf/sysservice-backupkeys.json DESTINATION ${WEBOS_INSTALL_WEBOS_SYSCONFDIR})
 install(FILES files/conf/sysservice.conf DESTINATION ${WEBOS_INSTALL_WEBOS_SYSCONFDIR})
 install(FILES files/conf/com.webos.service.systemservice.backupRegistration.json DESTINATION ${WEBOS_INSTALL_WEBOS_SYSCONFDIR}/backup)
