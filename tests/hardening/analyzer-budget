@@ -1,0 +1,22 @@
+# gcc -fanalyzer runs these files with a raised budget
+# (static-analysis.py RAISED_BUDGET: analyzer-max-enodes-per-program-point=32,
+# analyzer-bb-explosion-factor=20). With it each finished inside the 20 GB cap
+# and without -Wanalyzer-too-complex; at the default budget each stopped
+# early. The other files in Src/ still stopped early with it, made GCC 15.3
+# crash at -O2 (internal compiler error), or did not finish
+# (TimePrefsHandler.cpp: 36 min and 19.5 GB at -O0, then killed; -O2 not
+# tried). Of the test sources test_json and test_prefsdb were tried at -O0 and
+# ran past 600 s; the others were not tried. Format: <optimisation> <file>
+-O0 Src/BackupManager.cpp
+-O0 Src/BuildInfoHandler.cpp
+-O0 Src/ImageServices.cpp
+-O0 Src/JSONUtils.cpp
+-O0 Src/Logging.cpp
+-O0 Src/NetworkConnectionListener.cpp
+-O0 Src/PrefsDb.cpp
+-O0 Src/RingtonePrefsHandler.cpp
+-O0 Src/Settings.cpp
+-O0 Src/SystemRestore.cpp
+-O0 Src/UrlRep.cpp
+-O2 Src/Settings.cpp
+-O2 Src/Utils.cpp

@@ -43,7 +43,7 @@ shift 2
 VARIANTS=${*:-asan-gcc asan-clang tsan valgrind}
 HERE=$(cd "$(dirname "$0")" && pwd)
 OUT="$BUILD/sanitizers"
-JOBS=$(nproc 2>/dev/null || echo 4)
+JOBS=${JOBS:-8}	# parallel compiles; keep it modest, sanitizer builds are big
 mkdir -p "$OUT"
 rc=0
 summary=""
@@ -155,8 +155,8 @@ for v in $VARIANTS; do
 		run_variant asan-gcc "${SAN_GXX:-g++}" \
 			"-fsanitize=address,undefined -fno-sanitize-recover=all" ;;
 	asan-clang)
-		# unsigned wrap-around is well defined and used on purpose (hashes,
-		# base64, tz decoding); everything else in 'integer' is reported
+		# unsigned wrap-around is well defined and used on purpose (tz
+		# decoding); everything else in 'integer' is reported
 		run_variant asan-clang "${SAN_CLANGXX:-clang++}" \
 			"-fsanitize=address,undefined,integer,nullability -fno-sanitize=unsigned-integer-overflow,unsigned-shift-base -fno-sanitize-recover=all -fsanitize-ignorelist=$HERE/ubsan.ignorelist" ;;
 	tsan)

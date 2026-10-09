@@ -164,7 +164,8 @@ def main():
     ap.add_argument("--arch", default=",".join(ARCHES), help="comma separated: " + ",".join(ARCHES))
     ap.add_argument("--compiler", default="gcc,clang", help="comma separated: gcc,clang")
     ap.add_argument("--update-baseline", action="store_true")
-    ap.add_argument("--jobs", "-j", type=int, default=os.cpu_count() or 4)
+    ap.add_argument("--jobs", "-j", type=int, default=min(8, os.cpu_count() or 4),
+                    help="parallel compiles (default 8)")
     ap.add_argument("--out", help="default <build>/build-matrix")
     args = ap.parse_args()
     out = os.path.abspath(args.out or os.path.join(args.build, "build-matrix"))

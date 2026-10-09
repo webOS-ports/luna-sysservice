@@ -1,9 +1,5 @@
 # clang -fsanitize-ignorelist for run-sanitizers.sh (asan-clang).
 #
-# The base64 coder moves bytes between char, unsigned char and int on
-# purpose: every such implicit conversion there is a byte being repacked,
-# none of it undefined behaviour, and the padding lookup that yields npos
-# (truncated to 255) only feeds bits that are thrown away. The implicit
-# conversion checks stay on for everything else.
-[implicit-conversion]
-fun:*base64*
+# Exempts code from clang's checks, one "[check]" section and "fun:"/"src:"
+# line per exemption, each with the reason it is not a defect. There are no
+# exemptions: every implicit conversion check is on for all of our code.

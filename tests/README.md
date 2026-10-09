@@ -55,12 +55,17 @@ removes them afterwards. The TzParser tests read the host's
 | `test_tzparser.cpp` | `parseTimeZone` against real tzdata: transitions, offsets, abbreviations, the `Etc/` fallback, and that a zone name cannot leave `/usr/share/zoneinfo` (`..`, `/.`, leading `.`) |
 | `test_json.cpp` | the schema macros every method validates its payload with (strict, relaxed, nested), the `JsonMessageParser` getters, `createJsonReply`; the timeZone json helpers of `TimePrefsHandler` |
 | `test_prefsdb.cpp` | `PrefsDb` on a scratch database: set/get, `getPrefs`, `getAllPrefs`, `copyKeys`, `merge`, with keys, values and file names that attempt SQL injection |
-| `test_utils.cpp` | splitting and trimming, base64 (RFC 4648 vectors, every byte value), `readFile`, `fileCopy` (never truncates the target on a missing source), `createTempFile`, `append_format` beyond its stack buffer, `extractFromJson` |
+| `test_utils.cpp` | splitting and trimming, `fileCopy` (never truncates the target on a missing source, never writes through a symlink, reports a write that fails on the final flush), `createTempFile`, `extractFromJson` |
+| `test_time.cpp` | `TimePrefsHandler::convertDate` (conversion, bad input, TZ left set or unset as it was, repeated conversions) and `zoneAbbreviation` |
+| `test_prefsfactory.cpp` | `PrefsFactory::valueFromDbString`: stored json, bare strings (with quotes and backslashes), numbers and literals |
+| `test_settings.cpp` | the schema error option read from the config file, the `-l` option |
+| `test_systemrestore.cpp` | the system token: written, and never through a symlink |
 
 Every test was mutation-checked. The behaviour it guards was broken on a
-committed tree, the test was seen to fail, and the tree was restored. 47
-mutations were made and 45 were caught. The two that survived change nothing
-observable:
+committed tree, the test was seen to fail, and the tree was restored. For the
+suite as first added, 47 mutations were made and 45 were caught (tests of
+functions since removed as unused went with them). The two that survived
+change nothing observable:
 
 - dropping the `..` check in `TzParser`. Every `..` that could climb out
   already starts the name or follows a `/`, and those are refused by the
@@ -68,6 +73,14 @@ observable:
 - dropping `tzCityNameFromJsonValue`'s `isString()` check. pbnjson's
   `asString()` on a non-string returns `""`, the same as the check. pbnjson
   documents that case as undefined; its implementation returns `""`.
+
+The tests added with the analyser fixes were checked the same way: putting
+back the old code makes `test_time`, `test_prefsfactory`, `test_settings`,
+`test_systemrestore` and the two new `fileCopy` tests fail. The old `set_tz()`
+(a freed buffer left in `environ`) is caught by valgrind, not by ASan, as the
+stale read happens inside the C library. Two fixes have no failing test:
+`isspace()`/`tolower()` on a plain `char` behave the same on glibc, whose
+ctype tables accept negative indices.
 
 ## Static analysis (`hardening/static-analysis.sh`)
 
@@ -98,6 +111,14 @@ Findings that already existed when the gate was introduced are listed in
 - a finding that is not in the baseline;
 - a file a tool could not analyse.
 
+The baseline lists only findings triaged as false positives (or as places a
+tool cannot see past), each group under a `## <reason>` line. The gate also
+fails on a baseline entry without a reason. `--update-baseline` keeps the
+reasons of findings that are still reported and puts new ones under
+`## UNDOCUMENTED`, which fails the next check until they are triaged: fix the
+code, mark the line (`NOLINT(check) // why`, `// cppcheck-suppress id`,
+`// Flawfinder: ignore`), or replace `UNDOCUMENTED` with the reason.
+
 The baseline holds no line numbers, so unrelated edits do not disturb it.
 Findings the tools no longer report are counted, as a hint to refresh the
 baseline. A tool that is not installed is reported as SKIPPED, and the run
@@ -109,8 +130,15 @@ Notes:
 - clang does not know OE's sysroot layout, so the script gives it the
   sysroot's libstdc++ headers explicitly. A file that fails to compile counts
   as a failure, never as clean.
-- The gcc analyzer runs with its default budget, one file at a time
-  (`--gcc-jobs`, default 1). Each run is capped at 20 GB of address space
+- The gcc analyzer runs one file at a time (`--gcc-jobs`, default 1), with
+  its default budget except for the files listed in
+  `hardening/analyzer-budget`. Those get a raised budget
+  (`analyzer-max-enodes-per-program-point=32`,
+  `analyzer-bb-explosion-factor=20`), with which each was seen to finish
+  inside the memory cap without stopping early. For the rest the raised
+  budget did not help: the analyzer still stopped early, ran past the time
+  limit or the memory cap (`TimePrefsHandler.cpp`), or crashed GCC 15.3 at
+  `-O2` (an internal compiler error). Each run is capped at 20 GB of address space
   (`--gcc-mem-gb`), and a file waits until 30 GB are free before it starts
   (`--min-free-gb`). On these C++ files a single cc1plus can take 10-18 GB;
   eight of them in parallel nearly exhausted a 125 GB machine. A file that
@@ -170,12 +198,15 @@ The sysroot for each arch is put together from `$OE_TMPDIR/sysroots-components`,
 so recipe workdirs that rm_work cleaned do not matter. The script only
 compiles: linking for the other arches adds no warnings in our code.
 
-Warnings already present in `Src/` and `Inc/` are listed in
-`hardening/build-matrix.baseline`. The run fails on:
+`hardening/build-matrix.baseline` lists accepted warnings in `Src/` and
+`Inc/`; it is empty. The run fails on:
 
-- any other warning;
+- any warning not in the baseline;
 - any warning at all in `tests/`;
 - a file that does not compile.
+
+At most 8 files compile at once (`-j`); `oe-build.sh` and
+`run-sanitizers.sh` also build with 8 jobs unless `JOBS` says otherwise.
 
 Logs and `warnings.tsv` go to `$B/build-matrix/`.
 
@@ -199,9 +230,8 @@ against the host C library. Our code is instrumented; the webOS libraries are
 the sysroot's own and are not instrumented. This needs the host's glibc to be
 at least the sysroot's.
 
-`hardening/ubsan.ignorelist` exempts only the base64 coder from clang's
-implicit-conversion checks, because it repacks bytes on purpose. Everything
-else halts at its first report.
+`hardening/ubsan.ignorelist` is where an exemption from clang's checks would
+go, with its reason. It holds none: every report halts the run.
 
 A variant fails on any of these:
 

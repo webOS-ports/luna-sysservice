@@ -34,6 +34,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 BASELINE = os.path.join(HERE, "static-analysis.baseline")
 COCCI_DIR = os.path.join(HERE, "cocci")
+# Files the gcc analyzer finishes with a raised budget inside the memory cap.
+ANALYZER_BUDGET = os.path.join(HERE, "analyzer-budget")
+RAISED_BUDGET = ["--param=analyzer-max-enodes-per-program-point=32",
+                 "--param=analyzer-bb-explosion-factor=20"]
 # The sources that are ours; everything else (sysroot headers) is context.
 OWN = ("Src/", "Inc/", "include/", "tests/")
 
@@ -141,6 +145,17 @@ def load_db(build):
     return units
 
 
+def raised_budget_units():
+    """(optimisation, file) pairs listed in analyzer-budget."""
+    pairs = set()
+    if os.path.isfile(ANALYZER_BUDGET):
+        for line in open(ANALYZER_BUDGET):
+            line = line.split("#", 1)[0].split()
+            if len(line) == 2:
+                pairs.add((line[0], line[1]))
+    return pairs
+
+
 def triple(cc):
     m = re.match(r"(.*)-(g\+\+|c\+\+|gcc|clang\+\+)$", os.path.basename(cc))
     return m.group(1) if m else None
@@ -244,12 +259,15 @@ class Runner:
             if not self.have(name, cc):
                 continue
             # At -O2 inlining hides some paths, at -O0 others: run both.
-            # The analyzer's default budget: on these C++ files (Qt, pbnjson
-            # and libstdc++ headers) a raised one takes many GB and hours per
-            # file. Where it gives up, -Wanalyzer-too-complex says so, and
-            # that is recorded like any other finding.
-            self.per_unit(name, units, lambda u: [
+            # The analyzer's default budget, raised for the files listed in
+            # analyzer-budget: those finish with it inside the memory cap, the
+            # others (Qt, pbnjson and libstdc++ heavy) do not. Where it gives
+            # up, -Wanalyzer-too-complex says so, and that is recorded like
+            # any other finding.
+            raised = raised_budget_units()
+            self.per_unit(name, units, lambda u, opt=opt: [
                 cc, *u["flags"], opt, "-fanalyzer", "-Wanalyzer-too-complex",
+                *(RAISED_BUDGET if (opt, rel(u["file"], "/")) in raised else []),
                 "-c", "-o", "/dev/null", u["file"]],
                 lambda sev, ident: ident.startswith("-Wanalyzer") or sev != "warning",
                 jobs=self.args.gcc_jobs, timeout=self.args.gcc_timeout, mem_gb=self.args.gcc_mem_gb)
@@ -382,22 +400,51 @@ class Runner:
         self.finish(name, found, failed)
 
 
+UNDOCUMENTED = "UNDOCUMENTED - triage: fix it, or replace this line with why it is a false positive"
+
+
+def read_baseline():
+    """The baseline as a Counter of keys, and each key's reason: the text of
+    the last "## " line above it."""
+    base, reasons, reason = collections.Counter(), {}, None
+    if os.path.isfile(BASELINE):
+        for line in open(BASELINE):
+            line = line.rstrip("\n")
+            if line.startswith("## "):
+                reason = line[3:].strip()
+            elif line.strip() and not line.startswith("#"):
+                base[line] += 1
+                if reason and line not in reasons:
+                    reasons[line] = reason
+    return base, reasons
+
+
 def compare(findings, update):
     current = collections.Counter(f.key() for f in findings)
+    base, reasons = read_baseline()
     if update:
+        # Keep each finding's documented reason; anything new is written
+        # under UNDOCUMENTED, which the check refuses until it is triaged.
+        groups = collections.defaultdict(list)
+        for k in sorted(current.elements()):
+            groups[reasons.get(k, UNDOCUMENTED)].append(k)
         with open(BASELINE, "w") as b:
-            b.write("# Pre-existing static-analysis findings; static-analysis.sh fails only on\n"
-                    "# findings that are not listed here. One line per finding (repeated when\n"
-                    "# reported more than once), without line numbers:\n"
-                    "# tool<TAB>severity<TAB>file<TAB>check<TAB>message\n"
-                    "# Regenerate with: tests/hardening/static-analysis.sh <build> --update-baseline\n")
-            for k in sorted(current.elements()):
-                b.write(k + "\n")
+            b.write("# Static-analysis findings triaged as false positives (or as what the\n"
+                    "# tool cannot see past). static-analysis.sh fails on any finding not\n"
+                    "# listed here, and on any entry listed without a reason.\n"
+                    "# One line per finding (repeated when reported more than once), without\n"
+                    "# line numbers: tool<TAB>severity<TAB>file<TAB>check<TAB>message\n"
+                    "# A \"## <reason>\" line documents the entries below it.\n"
+                    "# Regenerate with: tests/hardening/static-analysis.sh <build> --update-baseline\n"
+                    "# (reasons are kept for findings that are still reported).\n")
+            for reason in sorted(groups, key=lambda r: (r == UNDOCUMENTED, r)):
+                b.write("\n## %s\n" % reason)
+                for k in groups[reason]:
+                    b.write(k + "\n")
         print("baseline written: %d finding(s) in %s" % (sum(current.values()), os.path.relpath(BASELINE, ROOT)))
-        return [], collections.Counter()
-    base = collections.Counter()
-    if os.path.isfile(BASELINE):
-        base.update(l.rstrip("\n") for l in open(BASELINE) if l.strip() and not l.startswith("#"))
+        if UNDOCUMENTED in groups:
+            print("   %d of them UNDOCUMENTED: triage them before committing" % len(groups[UNDOCUMENTED]))
+        return [], collections.Counter(), []
     new_keys = current - base
     gone = base - current
     new = []
@@ -406,7 +453,8 @@ def compare(findings, update):
         if budget[f.key()] > 0:
             budget[f.key()] -= 1
             new.append(f)
-    return new, gone
+    undocumented = sorted(k for k in base if reasons.get(k, UNDOCUMENTED) == UNDOCUMENTED)
+    return new, gone, undocumented
 
 
 def main():
@@ -462,7 +510,7 @@ def main():
 
     if only and args.update_baseline:
         sys.exit("--update-baseline needs every tool; drop --only")
-    new, gone = compare(r.findings, args.update_baseline)
+    new, gone, undocumented = compare(r.findings, args.update_baseline)
 
     print("\n== summary")
     for tool, st in r.status.items():
@@ -475,6 +523,12 @@ def main():
         print("\n== NEW findings (%d), not in %s:" % (len(new), os.path.relpath(BASELINE, ROOT)))
         for x in sorted(new, key=lambda x: (x.file, x.line)):
             print("%s:%d: [%s] %s: %s [%s]" % (x.file, x.line, x.tool, x.sev, x.msg, x.id))
+        rc = 1
+    if undocumented:
+        print("\n== %d baseline entr%s without a reason (a \"## \" line above it):"
+              % (len(undocumented), "y" if len(undocumented) == 1 else "ies"))
+        for k in undocumented:
+            print("   " + k.replace("\t", " | "))
         rc = 1
     if any(s.startswith("FAILED") for s in r.status.values()):
         rc = 1

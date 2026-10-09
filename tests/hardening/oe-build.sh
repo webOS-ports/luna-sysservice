@@ -60,5 +60,5 @@ grep -q -- '-Wno-dev$' "$B/oe-cmake.sh" || { echo "cannot find the cmake call in
 	if [ ! -f build.ninja ]; then
 		eval "$(sed 's/-Wno-dev$/-Wno-dev "$@"/' oe-cmake.sh)"
 	fi
-	ninja
+	ninja -j"${JOBS:-8}"
 )
