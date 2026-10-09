@@ -18,7 +18,8 @@
 				"org.webosports.luna",
 				"org.webosports.*",
 				"com.palm.*",
-				"com.webos.surfacemanager-cardshell"
+				"com.webos.surfacemanager-cardshell",
+				"com.webos.chromium.location*"
 			]
 		},
 		{
