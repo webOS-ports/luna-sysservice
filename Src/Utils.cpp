@@ -49,6 +49,7 @@
 #include <sys/statfs.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include "UrlRep.h"
 #include "Utils.h"
 #include <cstdlib>
@@ -285,36 +286,42 @@ int fileCopy(const char * srcFileAndPath,const char * dstFileAndPath)
 	if ((srcFileAndPath == NULL) || (dstFileAndPath == NULL))
 		return -1;
 
-	// open the source first: opening the destination "wb" truncates it, which
-	// must not happen when the source turns out to be missing
+	// open the source first: opening the destination truncates it, which
+	// must not happen when the source turns out to be missing.
+	// Flawfinder: ignore - the source is the caller's choice, read only
 	FILE * infp = fopen(srcFileAndPath,"rb");
 	if (infp == NULL)
 		return -1;
-	FILE * outfp = fopen(dstFileAndPath,"wb");
+	// Destinations are on the user-writable media partition: never write
+	// through a symlink planted there.
+	// Flawfinder: ignore - O_NOFOLLOW
+	int outfd = open(dstFileAndPath, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0666);
+	FILE * outfp = (outfd == -1) ? NULL : fdopen(outfd, "wb");
 	if (outfp == NULL) {
-		fclose(infp);
+		if (outfd != -1)
+			(void) close(outfd);
+		(void) fclose(infp);
 		return -1;
 	}
 
 	char buffer[2048];
 	bool success=true;
-	while (!feof(infp)) {
-		size_t r = fread(buffer,1,2048,infp);
-		if ((r == 0) && (ferror(infp))) {
-			success=false;
-			break;
-		}
-		size_t w = fwrite(buffer,1,r,outfp);
-		if (w < r) {
+	size_t r;
+	while ((r = fread(buffer, 1, sizeof(buffer), infp)) > 0) {
+		if (fwrite(buffer, 1, r, outfp) != r) {
 			success=false;
 			break;
 		}
 	}
+	if (ferror(infp))
+		success=false;
 
-	fflush(infp);
-	fflush(outfp);	//apparently our filesystem doesn't like to commit even on close
-	fclose(infp);
-	fclose(outfp);
+	(void) fclose(infp);	// read only: nothing to lose
+	// a write error can surface only when the buffer is flushed
+	if (fflush(outfp) != 0)	//apparently our filesystem doesn't like to commit even on close
+		success=false;
+	if (fclose(outfp) != 0)
+		success=false;
 	if (!success) // incomplete copy
 	{
 		(void) unlink(dstFileAndPath);

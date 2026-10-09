@@ -63,7 +63,7 @@ Settings::Settings()
 	int _v;\
 	GError* _error = 0;\
 	_v=g_key_file_get_integer(keyfile,cat,name,&_error);\
-	if( !_error ) { var=(ESchemaErrorOptions)_v; }\
+	if( !_error ) { (void)schemaErrorOptionFromInt(_v, var); }\
 	else g_error_free(_error); \
 }
 
@@ -76,6 +76,16 @@ Settings::Settings()
 	else g_error_free(_error); \
 }
 
+
+bool schemaErrorOptionFromInt(int value, ESchemaErrorOptions& option)
+{
+	// Only a value the enum defines: anything else would be cast to an
+	// enumerator that does not exist.
+	if (value < EIgnore || value > EDefault)
+		return false;
+	option = static_cast<ESchemaErrorOptions>(value);
+	return true;
+}
 
 bool Settings::load(const char* settingsFile)
 {
@@ -135,7 +145,8 @@ bool Settings::parseCommandlineOptions(int argc, char** argv)
 
 	m_logLevel = logLevelStr ? logLevelStr : "";
 	g_free(logLevelStr);
-	std::transform(m_logLevel.begin(), m_logLevel.end(), m_logLevel.begin(), ::tolower);
+	std::transform(m_logLevel.begin(), m_logLevel.end(), m_logLevel.begin(),
+	               [](unsigned char c) { return static_cast<char>(::tolower(c)); });
 
 	return true;
 }

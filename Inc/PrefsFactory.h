@@ -21,6 +21,8 @@
 #include <string>
 #include <memory>
 
+#include <pbnjson.hpp>
+
 #include "Singleton.h"
 
 struct LSHandle;
@@ -52,6 +54,13 @@ public:
 	void postPrefChangeValueIsCompleteString(const std::string& key,const std::string& json_string);
 	void runConsistencyChecksOnAllHandlers();
 	
+	/**
+	 * A stored preference as json. Values are normally stored as serialized
+	 * json; a bare string or json primitive (number, true, false, null) is
+	 * converted too. Returns an invalid JValue if neither works.
+	 */
+	static pbnjson::JValue valueFromDbString(const std::string& stored);
+
 	void refreshAllKeys();		//useful for when the database is completely restored to another version
 								//at some point after sysservice startup (see BackupManager)
 private:

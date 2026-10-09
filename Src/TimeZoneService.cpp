@@ -611,7 +611,8 @@ bool TimeZoneService::cbGetTimeZoneFromEasData(LSHandle* lsHandle, LSMessage *me
 			// the loop below changes the process TZ to probe each candidate
 			// zone; remember the real one so it can be put back
 			const char* cpSavedTz = getenv("TZ");
-			std::string savedTz = cpSavedTz ? cpSavedTz : "";
+			const bool hadTz = (cpSavedTz != nullptr);
+			const std::string savedTz = hadTz ? cpSavedTz : "";
 
 			bool foundZone = false;
 
@@ -680,7 +681,7 @@ bool TimeZoneService::cbGetTimeZoneFromEasData(LSHandle* lsHandle, LSMessage *me
 			}
 
 			// put the process timezone back the way we found it
-			if (!savedTz.empty())
+			if (hadTz)
 				setenv("TZ", savedTz.c_str(), 1);
 			else
 				unsetenv("TZ");
@@ -1228,8 +1229,17 @@ bool TimeZoneService::createManualTimeZone(UserTzData& a_userTz)
 	// create Zone entry
 	writeTimeZoneInfo(fpZone, MANUAL_TZ_NAME, tzRule.c_str(), "USR", a_userTz.easBias);
 
-	fclose(fpZone);
+	// a short write (full disk) must not reach zic as a valid zone file
+	bool written = !ferror(fpZone);
+	if (fclose(fpZone) != 0)
+		written = false;
 	fpZone = NULL;
+	if (!written)
+	{
+		PmLogWarning(sysServiceLogContext(), "ZONE_WRITE_FAILED", 0,
+					 "failed to write the manual timezone source %s", usrDefinedTZFilePath);
+		return false;
+	}
 
 	if(g_mkdir_with_parents(usrDefinedTZPath, 0755) != 0)
 	{

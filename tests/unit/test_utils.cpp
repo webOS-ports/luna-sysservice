@@ -19,6 +19,10 @@
 #include <string>
 #include <vector>
 
+#include <csignal>
+#include <sys/resource.h>
+#include <unistd.h>
+
 #include <gtest/gtest.h>
 
 #include "Utils.h"
@@ -205,6 +209,44 @@ TEST(UtilsFiles, FileCopyCopiesEverythingAndKeepsTheTargetOnAMissingSource)
 
 	EXPECT_EQ(-1, fileCopy(nullptr, dir.file("dst").c_str()));
 	EXPECT_EQ(-1, fileCopy(dir.file("src").c_str(), nullptr));
+}
+
+// Copy destinations are on the user-writable media partition: a symlink
+// planted there must not make the root-owned service overwrite its target.
+TEST(UtilsFiles, FileCopyDoesNotWriteThroughASymlink)
+{
+	TempDir dir;
+	ASSERT_FALSE(dir.path().empty());
+	ASSERT_TRUE(TempDir::write(dir.file("src"), "ringtone"));
+	ASSERT_TRUE(TempDir::write(dir.file("victim"), "precious"));
+	ASSERT_EQ(0, symlink(dir.file("victim").c_str(), dir.file("dst").c_str()));
+
+	EXPECT_EQ(-1, fileCopy(dir.file("src").c_str(), dir.file("dst").c_str()));
+	EXPECT_EQ("precious", TempDir::read(dir.file("victim")));
+}
+
+// A write error that only shows when the buffered data is flushed (a full
+// disk) used to go unnoticed and leave a truncated copy reported as done.
+// RLIMIT_FSIZE makes the flush fail the same way.
+TEST(UtilsFiles, FileCopyReportsAFailedFlush)
+{
+	TempDir dir;
+	ASSERT_FALSE(dir.path().empty());
+	// smaller than stdio's buffer, so nothing is written before the flush
+	ASSERT_TRUE(TempDir::write(dir.file("src"), std::string(3000, 'x')));
+
+	struct rlimit old;
+	ASSERT_EQ(0, getrlimit(RLIMIT_FSIZE, &old));
+	struct rlimit small = old;
+	small.rlim_cur = 1000;
+	void (*oldHandler)(int) = signal(SIGXFSZ, SIG_IGN);
+	ASSERT_EQ(0, setrlimit(RLIMIT_FSIZE, &small));
+	int rc = fileCopy(dir.file("src").c_str(), dir.file("dst").c_str());
+	ASSERT_EQ(0, setrlimit(RLIMIT_FSIZE, &old));
+	signal(SIGXFSZ, oldHandler);
+
+	EXPECT_EQ(-1, rc);
+	EXPECT_FALSE(doesExistOnFilesystem(dir.file("dst").c_str()));
 }
 
 TEST(UtilsFiles, ExistenceAndSize)

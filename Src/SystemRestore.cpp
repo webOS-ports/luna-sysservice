@@ -17,6 +17,10 @@
 #include "SystemRestore.h"
 
 #include <cassert>
+#include <ctime>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <glib.h>
 
@@ -35,6 +39,20 @@
 #include "PrefsFactory.h"
 
 using namespace pbnjson;
+
+bool SystemRestore::writeTokenFile(const char* path)
+{
+	// Flawfinder: ignore - O_NOFOLLOW, and O_CREAT gives a new file our own mode
+	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0666);
+	if (fd < 0)
+		return false;
+
+	// doesn't matter what is in here, but a timestamp seems sane
+	const std::string stamp = std::to_string(static_cast<long long>(time(nullptr)));
+	bool ok = write(fd, stamp.data(), stamp.size()) == static_cast<ssize_t>(stamp.size());
+	ok = (close(fd) == 0) && ok;
+	return ok;
+}
 
 SystemRestore::SystemRestore() : m_msmState(Phone)
 {
@@ -475,12 +493,8 @@ int SystemRestore::startupConsistencyCheck()
 
 		//create token if all these succeeded
 		if (rc == 2) {
-			FILE * fp = fopen(PrefsDb::s_systemTokenFileAndPath,"w");
-			if (fp != NULL) {
-				fprintf(fp,"%lu",time(NULL));		//doesn't matter what I put in here, but timestamp seems sane
-				fflush(fp);
-				fclose(fp);
-			}
+			if (!writeTokenFile(PrefsDb::s_systemTokenFileAndPath))
+				PmLogWarning(sysServiceLogContext(), "TOKEN_WRITE_FAILED", 0, "failed to write the system token");
 		}
 		else {
 			PmLogWarning(sysServiceLogContext(), "TOKEN_MISSING", 0, "running - system token missing and WAS NOT written because one of the restore functions failed!");

@@ -35,6 +35,12 @@ enum ESchemaErrorOptions
 	EDefault                /**< Default, loads the value from settings (luna.conf) file  */
 };
 
+/**
+  * Sets option to value if value is one of ESchemaErrorOptions, and returns
+  * whether it was. Leaves option as it is otherwise.
+  */
+bool schemaErrorOptionFromInt(int value, ESchemaErrorOptions& option);
+
 class Settings : public Singleton<Settings>
 {
 	friend class Singleton<Settings>;

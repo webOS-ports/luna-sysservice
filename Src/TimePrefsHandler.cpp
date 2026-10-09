@@ -146,10 +146,10 @@ print_tzvars (void)
 
 static void
 set_tz(const char * tz) {
-	static gchar * env = NULL;
-	g_free(env);
-	env = g_strdup_printf("TZ=%s", tz);
-	putenv(env);
+	// setenv copies the value. (This used putenv() with a static buffer that
+	// it freed on the next call while environ still pointed into it: every
+	// second call read freed memory.)
+	setenv("TZ", tz, 1);
 	tzset();
 
 	PmLogDebug(sysServiceLogContext(),"%s: tz set to %s", __func__, tz);
@@ -183,10 +183,10 @@ struct TimeZoneInfo
 	std::string country;
 	std::string countryCode;
 	std::string jsonStringValue;
-	int   	dstSupported;
-	int   	offsetToUTC;
-	bool 	preferred;					//if set to true, then pick this TZ is searching by offset vs any others
-	int		howManyZonesForCountry;		//how many offsets (incl. this one) does this country (based on countryCode) span? e.g. USA = 9
+	int   	dstSupported = 0;
+	int   	offsetToUTC = 0;
+	bool 	preferred = false;			//if set to true, then pick this TZ is searching by offset vs any others
+	int		howManyZonesForCountry = 0;	//how many offsets (incl. this one) does this country (based on countryCode) span? e.g. USA = 9
 };
 
 namespace {
@@ -1902,6 +1902,16 @@ void TimePrefsHandler::postSystemTimeChange()
 	PrefsFactory::instance()->postPrefChangeValueIsCompleteString("getSystemTime", json.stringify());
 }
 
+std::string TimePrefsHandler::zoneAbbreviation(const struct tm& tm)
+{
+	char abbr[64];
+	// strftime returns 0, with the buffer contents unspecified, if the
+	// result does not fit
+	if (strftime(abbr, sizeof(abbr), "%Z", &tm) == 0)
+		return std::string();
+	return abbr;
+}
+
 void TimePrefsHandler::attachSystemTime(JValue &json)
 {
 	time_t utctime = time(NULL);
@@ -1929,9 +1939,7 @@ void TimePrefsHandler::attachSystemTime(JValue &json)
 	if (currentTimeZone()) {
 		json.put("timezone", currentTimeZone()->name);
 		//get current time zone abbreviation
-		char tzoneabbr_cstr[16];
-		strftime(tzoneabbr_cstr, 16,"%Z", &localTm);
-		json.put("TZ", tzoneabbr_cstr);
+		json.put("TZ", zoneAbbreviation(localTm));
 	}
 	else {
 		//default to something
@@ -3669,9 +3677,9 @@ bool TimePrefsHandler::cbSetPeriodicWakeupAlarmDResponse(LSHandle* lsHandle, LSM
 	// call associated with this callback should be sent correctly
 	assert( th );
 
-	bool returnValue;
-	bool getOk = parser.get("returnValue", returnValue);
-	assert( getOk ); // schema validation should ensure type and presence
+	bool returnValue = false;
+	if (!parser.get("returnValue", returnValue))
+		return false; // not reached: schema validation ensures type and presence
 
 	if (!returnValue)
 	{
@@ -4251,100 +4259,101 @@ Example response for a failed call:
 }
 \endcode
 */
-bool TimePrefsHandler::cbConvertDate(LSHandle* pHandle, LSMessage* pMessage, void*)
+bool TimePrefsHandler::convertDate(const std::string& date, const std::string& sourceTz,
+                                   const std::string& destTz, std::string& result,
+                                   std::string& errorText)
 {
-	Utils::gstring status {nullptr};
-	Utils::gstring error_text {nullptr};
-	bool ret = false;
+	// strptime only fills the fields it parses; clear the rest and let
+	// mktime figure out whether DST applies
 	struct tm local_tm;
-	char * bad_char = NULL;
+	memset(&local_tm, 0, sizeof(local_tm));
+	local_tm.tm_isdst = -1;
 
-	// {"date": string, "source_tz": string, "dest_tz": string}
-	LSMessageJsonParser parser(pMessage, STRICT_SCHEMA(PROPS_3(PROPERTY(date, string),
-															  PROPERTY(source_tz, string),
-															  PROPERTY(dest_tz, string))
-													  REQUIRED_3(date, source_tz, dest_tz)));
+	const char* bad_char = strptime(date.c_str(), "%Y-%m-%d %H:%M:%S", &local_tm);
+	if (NULL == bad_char) {
+		errorText = "unrecognized date format: '" + date + "'";
+		return false;
+	} else if (*bad_char != '\0') {
+		errorText = "unrecognized characters in date: '" + date + "'";
+		return false;
+	}
 
-	if (!parser.parse(__FUNCTION__, pHandle, EValidateAndErrorAlways))
-		return true;
+	if (!tz_exists(sourceTz.c_str())) {
+		errorText = "timezone not found: '" + sourceTz + "'";
+		return false;
+	}
 
-	JValue root = parser.get();
+	if (!tz_exists(destTz.c_str())) {
+		errorText = "timezone not found: '" + destTz + "'";
+		return false;
+	}
 
 	// remember the process timezone; the conversion below changes TZ and
 	// every other localtime()/mktime() user in this service depends on it
 	const char* cpSavedTz = getenv("TZ");
-	std::string savedTz = cpSavedTz ? cpSavedTz : "";
+	const bool hadTz = (cpSavedTz != nullptr);
+	const std::string savedTz = hadTz ? cpSavedTz : "";
 
-	do
-	{
+	// interpret the parsed wall-clock time in the source zone...
+	set_tz(sourceTz.c_str());
 
-		std::string date = root["date"].asString();
-		std::string source_tz = root["source_tz"].asString();
-		std::string dest_tz = root["dest_tz"].asString();
+	time_t local_time = mktime(&local_tm);
+	PmLogDebug(sysServiceLogContext(),"0 date='%s' local_time=%lld timezone=%ld", date.c_str(),
+		   (long long) local_time, timezone);
 
-		PmLogDebug(sysServiceLogContext(),"%s: converting %s from %s to %s", __func__, date.c_str(), source_tz.c_str(), dest_tz.c_str());
+	// ...and render it in the destination zone
+	set_tz(destTz.c_str());
 
-		// strptime only fills the fields it parses; clear the rest and let
-		// mktime figure out whether DST applies
-		memset(&local_tm, 0, sizeof(local_tm));
-		local_tm.tm_isdst = -1;
+	// ctime adds '\n' to the end of the result, so we need a little workaround
+	char buf[64]; // ctime_r needs 26
+	const char* str = ctime_r(&local_time, buf);
+	std::string str_time = str ? str : "\n";
+	str_time.pop_back();
+	PmLogDebug(sysServiceLogContext(),"1 date='%s' ctime='%s' local_time=%lld timezone=%ld", date.c_str(), str_time.c_str(),
+		   (long long) local_time, timezone);
 
-		bad_char = (char *) strptime(date.c_str(), "%Y-%m-%d %H:%M:%S", &local_tm);
-		if (NULL == bad_char) {
-			error_text = g_strdup_printf("unrecognized date format: '%s'", date.c_str());
-			break;
-		} else if (*bad_char != '\0') {
-			error_text = g_strdup_printf("unrecognized characters in date: '%s'", date.c_str());
-			break;
-		}
-
-		if (!tz_exists(source_tz.c_str())) {
-			error_text = g_strdup_printf("timezone not found: '%s'", source_tz.c_str());
-			break;
-		}
-
-		if (!tz_exists(dest_tz.c_str())) {
-			error_text = g_strdup_printf("timezone not found: '%s'", dest_tz.c_str());
-			break;
-		}
-
-		// interpret the parsed wall-clock time in the source zone...
-		set_tz(source_tz.c_str());
-
-		time_t local_time;
-		local_time = mktime(&local_tm);
-		PmLogDebug(sysServiceLogContext(),"0 date='%s' local_time=%lld timezone=%ld", date.c_str(),
-			   (long long) local_time, timezone);
-
-		// ...and render it in the destination zone
-		set_tz(dest_tz.c_str());
-
-		// ctime adds '\n' to the end of the result, so we need a little workaround
-		char *localtime = ctime(&local_time);
-		std::string str_time = localtime ? localtime : "\n";
-		str_time.pop_back();
-		PmLogDebug(sysServiceLogContext(),"1 date='%s' ctime='%s' local_time=%lld timezone=%ld", date.c_str(), str_time.c_str(),
-			   (long long) local_time, timezone);
-
-		const std::string statusStr = JObject {{"returnValue", true}, {"date", str_time}}.stringify();
-		status = g_strdup(statusStr.c_str());
-	}
-	while (false);
-
-	// put the process timezone back the way we found it
-	if (!savedTz.empty())
+	// put the process timezone back the way we found it, set or unset
+	if (hadTz) {
 		set_tz(savedTz.c_str());
+	} else {
+		unsetenv("TZ");
+		tzset();
+	}
 
-	if (status.get() == nullptr) {
-		g_assert(error_text.get() != nullptr);
-		const std::string statusStr = JObject {{"returnValue", false},
-											   {"errorText", error_text.get()}}.stringify();
-		status = g_strdup(statusStr.c_str());
-		PmLogWarning(sysServiceLogContext(), "ERROR_MESSAGE", 0, "error: %s", error_text.get());
+	result = str_time;
+	return true;
+}
+
+bool TimePrefsHandler::cbConvertDate(LSHandle* lsHandle, LSMessage* message, void*)
+{
+	// {"date": string, "source_tz": string, "dest_tz": string}
+	LSMessageJsonParser parser(message, STRICT_SCHEMA(PROPS_3(PROPERTY(date, string),
+															  PROPERTY(source_tz, string),
+															  PROPERTY(dest_tz, string))
+													  REQUIRED_3(date, source_tz, dest_tz)));
+
+	if (!parser.parse(__FUNCTION__, lsHandle, EValidateAndErrorAlways))
+		return true;
+
+	JValue root = parser.get();
+	std::string date = root["date"].asString();
+	std::string source_tz = root["source_tz"].asString();
+	std::string dest_tz = root["dest_tz"].asString();
+
+	PmLogDebug(sysServiceLogContext(),"%s: converting %s from %s to %s", __func__, date.c_str(), source_tz.c_str(), dest_tz.c_str());
+
+	std::string converted;
+	std::string errorText;
+	JObject reply;
+	if (convertDate(date, source_tz, dest_tz, converted, errorText)) {
+		reply = JObject {{"returnValue", true}, {"date", converted}};
+	} else {
+		reply = JObject {{"returnValue", false}, {"errorText", errorText}};
+		PmLogWarning(sysServiceLogContext(), "ERROR_MESSAGE", 0, "error: %s", errorText.c_str());
 	}
 
 	LS::Error error;
-	ret = LSMessageReply(pHandle, pMessage, status.get(), error);
+	bool ret = LSMessageReply(lsHandle, message, reply.stringify().c_str(), error);
 	if (!ret)
 	{
 		LSREPORT(*error.get());

@@ -60,6 +60,13 @@ public:
 	static bool msmPartitionAvailCallback(LSHandle* handle, LSMessage* message, void* ctxt);
 	
 	MSMState getMSMState() 					{ return m_msmState;}
+
+	/**
+	 * Writes the current time to path, which is on the user-writable media
+	 * partition: a symlink there is refused rather than followed. Returns
+	 * whether the whole file was written.
+	 */
+	static bool writeTokenFile(const char* path);
 	
 protected:
 	SystemRestore();

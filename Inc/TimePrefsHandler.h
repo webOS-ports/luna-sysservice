@@ -205,6 +205,21 @@ public:
     static bool cbConvertDate(LSHandle* lsHandle, LSMessage *message,
                                 void *user_data);
 
+    /**
+     * The work of /time/convertDate: renders date ("%Y-%m-%d %H:%M:%S",
+     * wall-clock time in zone sourceTz) as ctime() text in zone destTz.
+     * The process TZ is left as it was found, set or unset. Returns false
+     * with errorText set if the date or a zone is not valid.
+     */
+    static bool convertDate(const std::string& date, const std::string& sourceTz,
+                            const std::string& destTz, std::string& result,
+                            std::string& errorText);
+
+    /**
+     * The zone abbreviation of tm (strftime's %Z), or "" if it does not fit.
+     */
+    static std::string zoneAbbreviation(const struct tm& tm);
+
     static bool cbServiceStateTracker(LSHandle* lsHandle, LSMessage *message,
                                 void *user_data);
 

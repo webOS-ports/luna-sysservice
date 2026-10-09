@@ -480,7 +480,8 @@ static bool quotesRequired(const std::string& value)
 	if (val_str != pEnd) {
 		isQuotes = false;			// maybe number, will continue check
 		while (*pEnd != '\0') {
-			if (!isspace(*pEnd)) {		// if we have not spaces symbols after number => we have string
+			// if we have not spaces symbols after number => we have string
+			if (!isspace(static_cast<unsigned char>(*pEnd))) {
 				isQuotes = true;
 				break;
 			}
@@ -512,6 +513,20 @@ static bool quotesRequired(const std::string& value)
 	}
 
 	return isQuotes;
+}
+
+JValue PrefsFactory::valueFromDbString(const std::string& stored)
+{
+	JValue value = JDomParser::fromString(stored);
+	if (value.isValid())
+		return value;
+
+	// not JSON: a bare string, or a json primitive (number, true, ...)
+	if (quotesRequired(stored))
+		return JValue(stored);
+
+	JValue arr = JDomParser::fromString("[" + stored + "]");
+	return arr.isValid() ? arr[0] : arr;
 }
 
 /*!
@@ -626,30 +641,13 @@ static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message, void*)
 	std::string errorCode;
 	for (std::map<std::string, std::string>::const_iterator it = resultMap.begin();
 		 it != resultMap.end(); ++it) {
-		JValue value = JDomParser::fromString((*it).second);
-		if (value.isValid()) {
-			PmLogDebug(sysServiceLogContext(),"resultMap: [%s] -> [---, length %zu]",(*it).first.c_str(),(*it).second.size());
-			reply.put((*it).first, value);
+		JValue value = PrefsFactory::valueFromDbString((*it).second);
+		if (!value.isValid()) {
+			errorCode = value.errorString();
+			break;
 		}
-		else {
-			// not JSON, try to work with json primitive (ex. string, number)
-			std::string primitive;
-			if (quotesRequired((*it).second)) {
-				primitive = "[\"" + (*it).second + "\"]";
-			}
-			else {
-				primitive = "[" + (*it).second + "]";
-			}
-
-			JValue arr = JDomParser::fromString(primitive);
-			if (arr.isValid()) {
-				reply.put((*it).first, arr[0]);
-			}
-			else {
-				errorCode = arr.errorString();
-				break;
-			}
-		}
+		PmLogDebug(sysServiceLogContext(),"resultMap: [%s] -> [---, length %zu]",(*it).first.c_str(),(*it).second.size());
+		reply.put((*it).first, value);
 	}
 
 	if (errorCode.empty()) {
