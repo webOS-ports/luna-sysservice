@@ -39,7 +39,7 @@ public:
 
 private:
 
-	void init();
+	static void init();
 	static int readBuildInfoFile(std::map<std::string,std::string>& KVpairs);
 	
 	static std::list<std::string> s_keys;			//leave empty, but allocated so that keys() doesn't keep making new empty lists

@@ -36,13 +36,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <memory>
+#include <vector>
+
 #include "TzParser.h"
 
 //#define TRACE 1
 
 #undef DBG
 #if defined(TRACE)
-#define DBG(...) printf(__VA_ARGS__)
+#define DBG(...) printf(__VA_ARGS__) // Flawfinder: ignore - TRACE builds only, literal formats
 #else
 #define DBG(...) (void) 0
 #endif
@@ -81,6 +84,13 @@ struct ttentry {
 
 typedef std::vector<ttentry> ttentrylist;
 typedef std::vector<ttinfo>  ttinfolist;
+
+namespace {
+	struct FileCloser {
+		void operator()(FILE* fp) const { (void) fclose(fp); } // read only: nothing to lose on close
+	};
+	typedef std::unique_ptr<FILE, FileCloser> FilePtr;
+}
 
 static long
 detzcode(const char* codep)
@@ -133,8 +143,9 @@ TzTransitionList parseTimeZone(const char* tzName)
 	std::string filePath = zoneInfoDir;
 	filePath += tzName;
 
+	// the name was checked above: it cannot leave the zoneinfo tree
 	struct stat stBuf;
-	FILE* fp = fopen(filePath.c_str(), "r");
+	FilePtr fp(fopen(filePath.c_str(), "r")); // Flawfinder: ignore
 	if (!fp && errno == ENOENT)
 	{
 		// if file not found - try alternative filePath
@@ -143,47 +154,36 @@ TzTransitionList parseTimeZone(const char* tzName)
 		filePath = etcZoneInfoDir;
 		filePath += tzName;
 
-		fp = fopen(filePath.c_str(), "r");
+		fp.reset(fopen(filePath.c_str(), "r")); // Flawfinder: ignore
 		if (!fp && errno == ENOENT)
 		{
 			printf("Failed to find second try file: %s\n", filePath.c_str());
 			return TzTransitionList();
 		}
 	}
-	if (fp)
-	{
-		if (fstat(fileno(fp), &stBuf) != 0)
-		{
-			printf("Failed to stat opened file: %s\n", filePath.c_str());
-			fclose(fp);
-			return TzTransitionList();
-		}
-
-		if (!S_ISREG(stBuf.st_mode)
-			|| stBuf.st_size <= (int) sizeof(tzhead)) {
-			printf("not a regular file or too short to be a tz file: %s\n", filePath.c_str());
-			fclose(fp);
-			return TzTransitionList();
-		}
-	}
-	else
+	if (!fp)
 	{
 		printf("Failed to open file: %s\n", filePath.c_str());
 		return TzTransitionList();
 	}
+	if (fstat(fileno(fp.get()), &stBuf) != 0)
+	{
+		printf("Failed to stat opened file: %s\n", filePath.c_str());
+		return TzTransitionList();
+	}
+	if (!S_ISREG(stBuf.st_mode)
+		|| stBuf.st_size <= (off_t) sizeof(tzhead)) {
+		printf("not a regular file or too short to be a tz file: %s\n", filePath.c_str());
+		return TzTransitionList();
+	}
 
-    char *buf = (char*) malloc(stBuf.st_size);
-    if (!buf) {
-        printf("memory allocation failed for stBuf");
-        fclose(fp);
-        return TzTransitionList();
-    }
-	size_t size = fread(buf, 1, stBuf.st_size, fp);
-	fclose(fp);
+	std::vector<char> data(static_cast<size_t>(stBuf.st_size));
+	const char* buf = data.data();
+	size_t size = fread(data.data(), 1, data.size(), fp.get());
+	fp.reset();
 
-	if (size != (size_t) stBuf.st_size) {
+	if (size != data.size()) {
 		printf("Short read on file: %s\n", filePath.c_str());
-		free(buf);
 		return TzTransitionList();
 	}
 
@@ -218,12 +218,7 @@ TzTransitionList parseTimeZone(const char* tzName)
 			  The number of characters of "time zone abbreviation strings" stored in the file.
 	*/
 
-	long leapCnt = 0;
 	long timeCnt = 0;
-	long typeCnt = 0;
-	long charCnt = 0;
-	long gmtCnt = 0;
-	long stdCnt = 0;
 
 	long index = 0;
 	const long fileSize = (long) stBuf.st_size;
@@ -236,6 +231,7 @@ TzTransitionList parseTimeZone(const char* tzName)
 		// each data block starts with its own header; validate the block
 		// completely against the file size before touching the lists so a
 		// truncated or corrupt (second) block cannot read out of bounds
+		// cppcheck-suppress knownConditionTrueFalse ; true for a short second block
 		if (fileSize - index < (long) sizeof(struct tzhead)
 			|| memcmp(buf + index, TZ_MAGIC, 4) != 0) {
 			if (parsedOneBlock) {
@@ -243,11 +239,11 @@ TzTransitionList parseTimeZone(const char* tzName)
 				break;
 			}
 			printf("Not a tz file. Header signature mismatch: %s\n", filePath.c_str());
-			free(buf);
 			return TzTransitionList();
 		}
 
-		struct tzhead* head = (struct tzhead*) (buf + index);
+		// tzhead is all char arrays: any address is suitably aligned
+		const tzhead* head = reinterpret_cast<const tzhead*>(buf + index);
 
 		long blockLeapCnt = detzcode(head->tzh_leapcnt);
 		long blockTimeCnt = detzcode(head->tzh_timecnt);
@@ -286,16 +282,15 @@ TzTransitionList parseTimeZone(const char* tzName)
 			if (parsedOneBlock)
 				break;
 			printf("Corrupt tz file (bad counts): %s\n", filePath.c_str());
-			free(buf);
 			return TzTransitionList();
 		}
 
-		leapCnt = blockLeapCnt;
+		const long leapCnt = blockLeapCnt;
 		timeCnt = blockTimeCnt;
-		typeCnt = blockTypeCnt;
-		charCnt = blockCharCnt;
-		gmtCnt = blockGmtCnt;
-		stdCnt = blockStdCnt;
+		const long typeCnt = blockTypeCnt;
+		const long charCnt = blockCharCnt;
+		const long gmtCnt = blockGmtCnt;
+		const long stdCnt = blockStdCnt;
 
 		ttInfoList.clear();
 		ttInfoList.reserve(typeCnt);
@@ -329,7 +324,7 @@ TzTransitionList parseTimeZone(const char* tzName)
 			e.time = time;
 			ttEntryList.push_back(e);
 
-			DBG("tzh_timecnt: Time: %ld, %s", time, asctime(gmtime(&time)));
+			DBG("tzh_timecnt: Time: %lld\n", (long long) time);
 		}
 
 		/* Next come tzh_timecnt one-byte values of type unsigned char;
@@ -494,8 +489,6 @@ TzTransitionList parseTimeZone(const char* tzName)
 
 	DBG("Total Buffer size parsed: %ld\n", index);
 
-	free(buf);
-
 	// Dummy entry for standardized timezones which never had
 	// a transition time
 	if (ttEntryList.empty() && !ttInfoList.empty()) {
@@ -513,14 +506,14 @@ TzTransitionList parseTimeZone(const char* tzName)
 			|| (size_t) entry.indexToLocalTime >= ttInfoList.size())
 			continue;
 		const ttinfo& info   = ttInfoList[entry.indexToLocalTime];
-		struct tm* gmTime    = gmtime(&entry.time);
-		if (NULL==gmTime) continue;
+		struct tm gmTime;
+		if (NULL == gmtime_r(&entry.time, &gmTime)) continue;
 
 		TzTransition trans;
 		trans.time        = entry.time;
 		trans.utcOffset   = info.gmtOffset;
 		trans.isDst       = info.isDst;
-		trans.year        = gmTime->tm_year + 1900;
+		trans.year        = gmTime.tm_year + 1900;
 		trans.abbrName[0] = 0;
 
 		int j = info.abbrIndex;

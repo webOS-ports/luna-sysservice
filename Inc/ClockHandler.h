@@ -78,7 +78,7 @@ public:
 	/**
 	 * Handle not an available source
 	 */
-	bool handleNotAvailableSource(std::string source);
+	bool handleNotAvailableSource(const std::string& source);
 
 	/**
 	 * Compensate suspended time(systemOffset) to a clock
@@ -88,7 +88,7 @@ public:
 	/**
 	 * Compensate suspended time(systemOffset) to clocks
 	 */
-	void compensateSuspendedTimeToClocks(time_t offset, time_t timeStamp);
+	void compensateSuspendedTimeToClocks(time_t offset, time_t timestamp);
 
 	/**
 	 * Signal emmited when some clock was changed (i.e. offset from system time

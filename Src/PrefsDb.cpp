@@ -160,7 +160,7 @@ std::string PrefsDb::getPref(const std::string& key)
 	if (sqlite3_step(statement) == SQLITE_ROW) {
 		const unsigned char* res = sqlite3_column_text(statement, 0);
 		if (res)
-			result = (const char*) res;
+			result = reinterpret_cast<const char*>(res);
 	}
 
 Done:
@@ -197,7 +197,7 @@ bool PrefsDb::getPref(const std::string& key,std::string& r_val)
 		const unsigned char* res = sqlite3_column_text(statement, 0);
 		if (res)
 		{
-			r_val = (const char*) res;
+			r_val = reinterpret_cast<const char*>(res);
 			result = true;
 		}
 	}
@@ -231,9 +231,9 @@ std::map<std::string,std::string> PrefsDb::getAllPrefs()
 		goto Done;
 	}
 
-	while ((ret = sqlite3_step(statement)) == SQLITE_ROW) {
-		const char* key = (const char*) sqlite3_column_text(statement, 0);
-		const char* val = (const char*) sqlite3_column_text(statement, 1);
+	while (sqlite3_step(statement) == SQLITE_ROW) {
+		const char* key = reinterpret_cast<const char*>(sqlite3_column_text(statement, 0));
+		const char* val = reinterpret_cast<const char*>(sqlite3_column_text(statement, 1));
 		if (!key || !val)
 			continue;
 
@@ -248,7 +248,7 @@ std::map<std::string,std::string> PrefsDb::getAllPrefs()
 	return result;
 }
 
-int PrefsDb::merge(PrefsDb * p_sourceDb,bool overwriteSameKeys)
+int PrefsDb::merge(const PrefsDb * p_sourceDb,bool overwriteSameKeys)
 {
 	if (!p_sourceDb || (p_sourceDb == this))
 		return 0;
@@ -271,7 +271,7 @@ int PrefsDb::merge(const std::string& sourceDbFilename,bool overwriteSameKeys)
 			return 0;
 		}
 		std::string mergeCmd = std::string("INSERT INTO main.Preferences SELECT * FROM backupDb.Preferences;");
-		sqlOk = runSqlCommand(mergeCmd.c_str());
+		sqlOk = runSqlCommand(mergeCmd);
 		if (!sqlOk)
 		{
 			PmLogWarning(sysServiceLogContext(),"SQL_ERROR",0,"Failed to run INSERT command to merge [%s] into this db",sourceDbFilename.c_str());
@@ -420,9 +420,9 @@ std::map<std::string, std::string> PrefsDb::getPrefs(const std::list<std::string
 		goto Done;
 	}
 
-	while ((ret = sqlite3_step(statement)) == SQLITE_ROW) {
-		const char* key = (const char*) sqlite3_column_text(statement, 0);
-		const char* val = (const char*) sqlite3_column_text(statement, 1);
+	while (sqlite3_step(statement) == SQLITE_ROW) {
+		const char* key = reinterpret_cast<const char*>(sqlite3_column_text(statement, 0));
+		const char* val = reinterpret_cast<const char*>(sqlite3_column_text(statement, 1));
 		if (!key || !val)
 			continue;
 
@@ -583,7 +583,7 @@ bool PrefsDb::integrityCheckDb()
 	ret = sqlite3_step(statement);
 	if (ret == SQLITE_ROW) {
 		const unsigned char* result = sqlite3_column_text(statement, 0);
-		if (result && strcasecmp((const char*) result, "ok") == 0)
+		if (result && strcasecmp(reinterpret_cast<const char*>(result), "ok") == 0)
 			integrityOk = true;
 	}
 
@@ -703,7 +703,7 @@ void PrefsDb::synchronizeCustomerCareInfo() {
 		}
 		else if (cv != p_cDbv) {
 			//update
-			setPref(key.c_str(), p_cDbv.c_str());
+			setPref(key, p_cDbv);
 		}
 	}
 }

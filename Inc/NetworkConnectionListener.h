@@ -50,8 +50,7 @@ private:
 	static bool connectionManagerConnectCallback(LSHandle *sh, const char *serviceName, bool connected, void *ctx);
 	static bool connectionManagerGetStatusCallback(LSHandle* sh, LSMessage* message, void* ctxt);
 
-	bool connectionManagerConnectCallback(LSHandle *sh, const char *serviceName, bool connected);
-	bool connectionManagerGetStatusCallback(LSHandle *sh, LSMessage *message);
+	void updateConnectionStatus(LSHandle *sh, LSMessage *message);
 
 private:
 

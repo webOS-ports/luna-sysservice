@@ -89,24 +89,10 @@ void NetworkConnectionListener::unregisterFromConnectionManager()
 	}
 }
 
-bool NetworkConnectionListener::connectionManagerConnectCallback(LSHandle *sh
-                                                                , const char *serviceName
+bool NetworkConnectionListener::connectionManagerConnectCallback(LSHandle * /*sh*/
+                                                                , const char * /*serviceName*/
                                                                 , bool connected
-                                                                , void *ctx)
-{
-	return NetworkConnectionListener::instance()->connectionManagerConnectCallback(sh, serviceName, connected);
-}
-
-bool NetworkConnectionListener::connectionManagerGetStatusCallback(LSHandle* sh, LSMessage* message, void* ctxt)
-{
-	if (LSMessageIsHubErrorMessage(message)) {  // returns false if message is NULL
-		PmLogWarning(sysServiceLogContext(), "ERROR_MESSAGE", 0, "The message received is an error message from the hub");
-		return true;
-	}
-	return NetworkConnectionListener::instance()->connectionManagerGetStatusCallback(sh, message);
-}
-
-bool NetworkConnectionListener::connectionManagerConnectCallback(LSHandle *sh, const char *serviceName, bool connected)
+                                                                , void * /*ctx*/)
 {
 	if (connected) {
 		LSHandle* serviceHandle = PrefsFactory::instance()->getServiceHandle();
@@ -123,7 +109,17 @@ bool NetworkConnectionListener::connectionManagerConnectCallback(LSHandle *sh, c
 	return true;
 }
 
-bool NetworkConnectionListener::connectionManagerGetStatusCallback(LSHandle *sh, LSMessage *message)
+bool NetworkConnectionListener::connectionManagerGetStatusCallback(LSHandle* sh, LSMessage* message, void* /*ctxt*/)
+{
+	if (LSMessageIsHubErrorMessage(message)) {  // returns false if message is NULL
+		PmLogWarning(sysServiceLogContext(), "ERROR_MESSAGE", 0, "The message received is an error message from the hub");
+		return true;
+	}
+	NetworkConnectionListener::instance()->updateConnectionStatus(sh, message);
+	return true;
+}
+
+void NetworkConnectionListener::updateConnectionStatus(LSHandle *sh, LSMessage *message)
 {
 	// {"returnValue": boolean, "isInternetConnectionAvailable": boolean}
 	LSMessageJsonParser parser(message, RELAXED_SCHEMA(
@@ -133,14 +129,12 @@ bool NetworkConnectionListener::connectionManagerGetStatusCallback(LSHandle *sh,
 	                                       REQUIRED_1(returnValue)));
 
 	if (!parser.parse(__FUNCTION__, sh, Settings::instance()->schemaValidationOption))
-		return true;
+		return;
 
-	bool isInternetConnectionAvailable = parser.get()["isInternetConnectionAvailable"].asBool();
+	bool available = parser.get()["isInternetConnectionAvailable"].asBool();
 
-	if (m_isInternetConnectionAvailable != isInternetConnectionAvailable) {
-		m_isInternetConnectionAvailable = isInternetConnectionAvailable;
-		signalConnectionStateChanged.fire(isInternetConnectionAvailable);
+	if (m_isInternetConnectionAvailable != available) {
+		m_isInternetConnectionAvailable = available;
+		signalConnectionStateChanged.fire(available);
 	}
-
-	return true;
 }

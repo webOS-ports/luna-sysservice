@@ -95,7 +95,8 @@ void BuildInfoHandler::init()
  */
 int BuildInfoHandler::readBuildInfoFile(std::map<std::string,std::string>& KVpairs) {
 	
-	FILE * fp = fopen(BUILDINFO_FILE,"r");
+	// A fixed, root-owned file under the sysconfdir; nothing user-controlled.
+	FILE * fp = fopen(BUILDINFO_FILE,"r"); // Flawfinder: ignore
 	if (fp == NULL)
 		return 0;
 	
@@ -123,7 +124,7 @@ int BuildInfoHandler::readBuildInfoFile(std::map<std::string,std::string>& KVpai
 		KVpairs[key] = value;
 		++n;
 	}
-	fclose(fp);
+	(void)fclose(fp); // opened read-only: nothing to lose on close
 	return n;
 }
 

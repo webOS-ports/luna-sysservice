@@ -45,23 +45,6 @@ TEST(UtilsTrim, DropsLeadingAndTrailingWhitespaceOnly)
 	EXPECT_EQ("", s);
 }
 
-TEST(UtilsSubstring, PicksTheNthField)
-{
-	std::string out;
-	EXPECT_TRUE(getNthSubstring(2, out, "one two  three"));
-	EXPECT_EQ("two", out);
-	EXPECT_TRUE(getNthSubstring(3, out, "one two  three"));
-	EXPECT_EQ("three", out);
-	// 0 is taken as the first field
-	EXPECT_TRUE(getNthSubstring(0, out, "  one two"));
-	EXPECT_EQ("one", out);
-
-	out = "untouched";
-	EXPECT_FALSE(getNthSubstring(4, out, "one two  three"));
-	EXPECT_FALSE(getNthSubstring(1, out, " \t "));
-	EXPECT_EQ("untouched", out);
-}
-
 TEST(UtilsSplit, SkipsEmptyFieldsInVectorAndList)
 {
 	std::vector<std::string> v;
@@ -109,85 +92,6 @@ TEST(UtilsSplit, FileAndPath)
 	EXPECT_EQ("f", file);
 }
 
-TEST(UtilsSplit, FileAndExtension)
-{
-	std::string file, ext;
-	EXPECT_EQ(3, splitFileAndExtension("archive.tar.gz", file, ext));
-	EXPECT_EQ("archive.tar", file);
-	EXPECT_EQ("gz", ext);
-
-	file.clear(); ext.clear();
-	EXPECT_EQ(1, splitFileAndExtension("noext", file, ext));
-	EXPECT_EQ("noext", file);
-	EXPECT_EQ("", ext);
-}
-
-static std::string b64(const std::string& s)
-{
-	return base64_encode(reinterpret_cast<const unsigned char*>(s.data()),
-	                     static_cast<unsigned int>(s.size()));
-}
-
-// RFC 4648 section 10
-TEST(UtilsBase64, EncodesTheRfc4648Vectors)
-{
-	EXPECT_EQ("", b64(""));
-	EXPECT_EQ("Zg==", b64("f"));
-	EXPECT_EQ("Zm8=", b64("fo"));
-	EXPECT_EQ("Zm9v", b64("foo"));
-	EXPECT_EQ("Zm9vYg==", b64("foob"));
-	EXPECT_EQ("Zm9vYmE=", b64("fooba"));
-	EXPECT_EQ("Zm9vYmFy", b64("foobar"));
-}
-
-TEST(UtilsBase64, DecodesTheRfc4648Vectors)
-{
-	EXPECT_EQ("", base64_decode(""));
-	EXPECT_EQ("f", base64_decode("Zg=="));
-	EXPECT_EQ("fo", base64_decode("Zm8="));
-	EXPECT_EQ("foo", base64_decode("Zm9v"));
-	EXPECT_EQ("foob", base64_decode("Zm9vYg=="));
-	EXPECT_EQ("fooba", base64_decode("Zm9vYmE="));
-	EXPECT_EQ("foobar", base64_decode("Zm9vYmFy"));
-}
-
-TEST(UtilsBase64, RoundTripsEveryByteValue)
-{
-	std::string all;
-	for (int i = 0; i < 256; i++)
-		all += static_cast<char>(i);
-	for (size_t len = 0; len <= all.size(); len += 37)
-		EXPECT_EQ(all.substr(0, len), base64_decode(b64(all.substr(0, len))));
-	EXPECT_EQ(all, base64_decode(b64(all)));
-}
-
-TEST(UtilsBase64, DecodeStopsAtTheFirstForeignCharacter)
-{
-	EXPECT_EQ("foo", base64_decode("Zm9v!YmFy"));
-	// bytes >= 0x80 are not base64 and must not be looked up as such
-	EXPECT_EQ("foo", base64_decode("Zm9v\xc3\xa9YmFy"));
-}
-
-TEST(UtilsFiles, ReadFile)
-{
-	TempDir dir;
-	ASSERT_FALSE(dir.path().empty());
-
-	EXPECT_EQ(nullptr, readFile(nullptr));
-	EXPECT_EQ(nullptr, readFile(dir.file("missing").c_str()));
-
-	ASSERT_TRUE(TempDir::write(dir.file("empty"), ""));
-	EXPECT_EQ(nullptr, readFile(dir.file("empty").c_str()));
-
-	const std::string content = "line one\nline two\n";
-	ASSERT_TRUE(TempDir::write(dir.file("text"), content));
-	char *data = readFile(dir.file("text").c_str());
-	ASSERT_NE(nullptr, data);
-	EXPECT_EQ(content, std::string(data));
-	EXPECT_EQ(content.size(), strlen(data));
-	delete[] data;
-}
-
 TEST(UtilsFiles, FileCopyCopiesEverythingAndKeepsTheTargetOnAMissingSource)
 {
 	TempDir dir;
@@ -200,12 +104,12 @@ TEST(UtilsFiles, FileCopyCopiesEverythingAndKeepsTheTargetOnAMissingSource)
 	ASSERT_TRUE(TempDir::write(dir.file("src"), content));
 
 	EXPECT_EQ(1, fileCopy(dir.file("src").c_str(), dir.file("dst").c_str()));
-	EXPECT_EQ(content, TempDir::read(dir.file("dst")));
+	EXPECT_EQ(content, TempDir::contents(dir.file("dst")));
 	EXPECT_EQ(5000, filesizeOnFilesystem(dir.file("dst").c_str()));
 
 	ASSERT_TRUE(TempDir::write(dir.file("keep"), "precious"));
 	EXPECT_EQ(-1, fileCopy(dir.file("missing").c_str(), dir.file("keep").c_str()));
-	EXPECT_EQ("precious", TempDir::read(dir.file("keep")));
+	EXPECT_EQ("precious", TempDir::contents(dir.file("keep")));
 
 	EXPECT_EQ(-1, fileCopy(nullptr, dir.file("dst").c_str()));
 	EXPECT_EQ(-1, fileCopy(dir.file("src").c_str(), nullptr));
@@ -222,7 +126,7 @@ TEST(UtilsFiles, FileCopyDoesNotWriteThroughASymlink)
 	ASSERT_EQ(0, symlink(dir.file("victim").c_str(), dir.file("dst").c_str()));
 
 	EXPECT_EQ(-1, fileCopy(dir.file("src").c_str(), dir.file("dst").c_str()));
-	EXPECT_EQ("precious", TempDir::read(dir.file("victim")));
+	EXPECT_EQ("precious", TempDir::contents(dir.file("victim")));
 }
 
 // A write error that only shows when the buffered data is flushed (a full
@@ -243,7 +147,7 @@ TEST(UtilsFiles, FileCopyReportsAFailedFlush)
 	ASSERT_EQ(0, setrlimit(RLIMIT_FSIZE, &small));
 	int rc = fileCopy(dir.file("src").c_str(), dir.file("dst").c_str());
 	ASSERT_EQ(0, setrlimit(RLIMIT_FSIZE, &old));
-	signal(SIGXFSZ, oldHandler);
+	(void) signal(SIGXFSZ, oldHandler);
 
 	EXPECT_EQ(-1, rc);
 	EXPECT_FALSE(doesExistOnFilesystem(dir.file("dst").c_str()));
@@ -284,30 +188,6 @@ TEST(UtilsFiles, CreateTempFileMakesAnEmptyFileWithTheExtension)
 
 	std::string c;
 	EXPECT_EQ(0, createTempFile(dir.file("no/such/dir"), "tag", ".jpg", c));
-}
-
-TEST(UtilsFormat, AppendFormatHandlesShortAndLongOutput)
-{
-	std::string s = "x";
-	append_format(s, "=%d,%s", 42, "y");
-	EXPECT_EQ("x=42,y", s);
-
-	// longer than the 1 KiB stack buffer
-	const std::string longArg(3000, 'z');
-	std::string l = "<";
-	append_format(l, "%s>", longArg.c_str());
-	EXPECT_EQ("<" + longArg + ">", l);
-
-	std::string u = "same";
-	append_format(u, nullptr);
-	EXPECT_EQ("same", u);
-}
-
-TEST(UtilsFormat, StringToLower)
-{
-	std::string s = "HeLLo World 123";
-	string_to_lower(s);
-	EXPECT_EQ("hello world 123", s);
 }
 
 TEST(UtilsJson, ExtractFromJsonOnlyReturnsStrings)

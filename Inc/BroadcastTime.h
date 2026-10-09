@@ -24,7 +24,7 @@
  */
 class BroadcastTime
 {
-	enum { None, UtcAndLocal } m_type;
+	enum : unsigned char { None, UtcAndLocal } m_type;
 
 	time_t m_utcOffset;
 	time_t m_localOffset;

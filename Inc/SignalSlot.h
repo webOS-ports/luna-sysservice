@@ -105,7 +105,7 @@ class SlotBase<Arg0, void, void, void, void> : public SlotRoot
 {
 public:
 	
-	virtual void fire(Arg0 arg0) = 0;
+	virtual void fire(Arg0 arg0) = 0; // NOLINT(portability-template-virtual-member-function) pure virtual, no body to instantiate
 };
 
 template <class Arg0, class Arg1>
@@ -113,7 +113,7 @@ class SlotBase<Arg0, Arg1, void, void, void> : public SlotRoot
 {
 public:
 	
-	virtual void fire(Arg0 arg0, Arg1 arg1) = 0;
+	virtual void fire(Arg0 arg0, Arg1 arg1) = 0; // NOLINT(portability-template-virtual-member-function) pure virtual, no body to instantiate
 };
 
 template <class Arg0, class Arg1, class Arg2>
@@ -121,7 +121,7 @@ class SlotBase<Arg0, Arg1, Arg2, void, void> : public SlotRoot
 {
 public:
 	
-	virtual void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2) = 0;
+	virtual void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2) = 0; // NOLINT(portability-template-virtual-member-function) pure virtual, no body to instantiate
 };
 
 template <class Arg0, class Arg1, class Arg2, class Arg3>
@@ -129,7 +129,7 @@ class SlotBase<Arg0, Arg1, Arg2, Arg3, void> : public SlotRoot
 {
 public:
 	
-	virtual void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3) = 0;
+	virtual void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3) = 0; // NOLINT(portability-template-virtual-member-function) pure virtual, no body to instantiate
 };
 
 
@@ -181,7 +181,7 @@ public:
 		return this->m_receiver;
 	}
 
-	void fire() {
+	void fire() override {
 		(static_cast<Receiver*>(this->m_receiver)->*(this->m_function))();
 	}
 };
@@ -205,7 +205,7 @@ public:
 		return this->m_receiver;
 	}
 
-	void fire(Arg0 arg) {
+	void fire(Arg0 arg) override {
 		(static_cast<Receiver*>(this->m_receiver)->*(this->m_function))(arg);
 	}
 };
@@ -227,7 +227,7 @@ public:
 		return this->m_receiver;
 	}
 
-	void fire(Arg0 arg0, Arg1 arg1) {
+	void fire(Arg0 arg0, Arg1 arg1) override {
 		(static_cast<Receiver*>(this->m_receiver)->*(this->m_function))(arg0, arg1);
 	}	
 };
@@ -295,7 +295,7 @@ public:
 		return this->m_receiver;
 	}
 
-	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2) {
+	void fire(Arg0 arg0, Arg1 arg1, Arg2 arg2) override {
 		(static_cast<Receiver*>(this->m_receiver)->*(this->m_function))(arg0, arg1, arg2);
 	}	
 };
@@ -331,7 +331,7 @@ class SignalBase : public Sender
 {
 public:
 
-	~SignalBase() override {
+	~SignalBase() override { // NOLINT(portability-template-virtual-member-function) body is valid for every Signal type
 		for (typename SlotSet::const_iterator it = this->m_slots.begin();
 			 it != this->m_slots.end(); ++it) {
 			(*it)->slotReceiver()->disconnected(this);
@@ -361,7 +361,7 @@ public:
 		recv->disconnected(this);
 	}
 
-	void disconnectTrackable(Trackable* recv) override {
+	void disconnectTrackable(Trackable* recv) override { // NOLINT(portability-template-virtual-member-function) body is valid for every Signal type
 		disconnect(recv);
 	}
 	

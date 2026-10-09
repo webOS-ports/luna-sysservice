@@ -80,7 +80,7 @@ TEST(SystemRestoreToken, WritesTheTime)
 	ASSERT_FALSE(dir.path().empty());
 
 	ASSERT_TRUE(SystemRestore::writeTokenFile(dir.file("token").c_str()));
-	std::string stamp = TempDir::read(dir.file("token"));
+	std::string stamp = TempDir::contents(dir.file("token"));
 	ASSERT_FALSE(stamp.empty());
 	for (char c : stamp)
 		EXPECT_TRUE(isdigit(static_cast<unsigned char>(c))) << stamp;
@@ -97,5 +97,5 @@ TEST(SystemRestoreToken, RefusesASymlink)
 	ASSERT_EQ(0, symlink(dir.file("victim").c_str(), dir.file("token").c_str()));
 
 	EXPECT_FALSE(SystemRestore::writeTokenFile(dir.file("token").c_str()));
-	EXPECT_EQ("precious", TempDir::read(dir.file("victim")));
+	EXPECT_EQ("precious", TempDir::contents(dir.file("victim")));
 }

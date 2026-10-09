@@ -49,9 +49,9 @@ std::string BackupManager::s_backupKeylistFilename = WEBOS_INSTALL_WEBOS_SYSCONF
  * backup or restore.
  */
 LSMethod BackupManager::s_BackupServerMethods[]  = {
-	{ "preBackup"  , BackupManager::preBackupCallback },
-	{ "postRestore", BackupManager::postRestoreCallback },
-	{ 0, 0 }
+	{ "preBackup"  , BackupManager::preBackupCallback, LUNA_METHOD_FLAGS_NONE },
+	{ "postRestore", BackupManager::postRestoreCallback, LUNA_METHOD_FLAGS_NONE },
+	{ nullptr, nullptr, LUNA_METHOD_FLAGS_NONE }
 };
 
 
@@ -112,11 +112,9 @@ void BackupManager::initFilesForBackup(bool useFullPath)
 			}
 			else
 			{
-				char *dbFilename = strdup(m_p_backupDb->databaseFile().c_str());
-                const char *cstr = basename(dbFilename ? dbFilename : "");
-				std::string filename = ( cstr ? std::string(cstr) : std::string());
-				free(dbFilename);
-				if (filename.find("/") != std::string::npos)
+				Utils::gstring base {g_path_get_basename(m_p_backupDb->databaseFile().c_str())};
+				std::string filename = base.get() ? std::string(base.get()) : std::string();
+				if (filename.find('/') != std::string::npos)
 					filename = std::string("");			///all for safety
 				m_backupFiles.push_back(filename);
 			}
@@ -186,7 +184,7 @@ Example response for a succesful call:
  * Called by the backup service for all four of our callback functions: preBackup,
  * postBackup, preRestore, postRestore.
  */
-bool BackupManager::preBackupCallback( LSHandle* lshandle, LSMessage *message, void *user_data)
+bool BackupManager::preBackupCallback( LSHandle* lshandle, LSMessage *message, void * /*user_data*/)
 {
 	PMLOG_TRACE("%s:starting",__FUNCTION__);
 	if (LSMessageIsHubErrorMessage(message)) {  // returns false if message is NULL
@@ -232,7 +230,8 @@ bool BackupManager::preBackupCallback( LSHandle* lshandle, LSMessage *message, v
 	{
 		//failed to create temp db
 		PmLogWarning(sysServiceLogContext(),"DB_ERROR",0,"unable to create a temporary backup db at [%s]...aborting!",dbfile.c_str());
-		return self->sendPreBackupResponse(lshandle,message,std::list<std::string>());
+		self->sendPreBackupResponse(lshandle,message,std::list<std::string>());
+		return true;
 	}
 
 	// Attempt to copy relevant keys into the temporary backup database
@@ -243,10 +242,12 @@ bool BackupManager::preBackupCallback( LSHandle* lshandle, LSMessage *message, v
 	if (!self->m_doBackupFiles)
 	{
 		PmLogWarning(sysServiceLogContext(),"NO_BACKUP",0,"opted not to do a backup at this time due to doBackup internal var");
-		return self->sendPreBackupResponse(lshandle,message,std::list<std::string>());
+		self->sendPreBackupResponse(lshandle,message,std::list<std::string>());
+		return true;
 	}
 
-	return self->sendPreBackupResponse(lshandle, message, self->m_backupFiles);
+	self->sendPreBackupResponse(lshandle, message, self->m_backupFiles);
+	return true;
 }
 
 /*! \page com_palm_systemservice_backup
@@ -291,7 +292,7 @@ Example response for a succesful call:
 }
 \endcode
 */
-bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message, void *user_data)
+bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message, void * /*user_data*/)
 {
 	// {"tempDir": string, "files": array}
 	LSMessageJsonParser parser(message, STRICT_SCHEMA(PROPS_2(PROPERTY(tempDir, string),
@@ -319,7 +320,8 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
 		if (path[0] != '/')
 		{
 			//not an absolute path apparently...try taking on tempdir
-			path = tempDir + std::string("/") + path;
+			path.insert(0, 1, '/');
+			path.insert(0, tempDir);
 			PmLogWarning(sysServiceLogContext(),"NOT_ABSOLUTE_FILE_PATH",0,"array object  is a file path that seems to be relative...trying to absolute-ize it by adding tempDir, like so: [%s]",path.c_str());
 		}
 
@@ -331,8 +333,10 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
 
 			if (Settings::instance()->m_saveLastBackedUpTempDb)
 			{
-				Utils::fileCopy(path.c_str(),
-								(std::string(PrefsDb::s_mediaPartitionPath)+std::string(PrefsDb::s_sysserviceDir)+std::string("/lastRestoredTempDb.db")).c_str());
+				std::string lastRestored = PrefsDb::s_mediaPartitionPath;
+				lastRestored += PrefsDb::s_sysserviceDir;
+				lastRestored += "/lastRestoredTempDb.db";
+				Utils::fileCopy(path.c_str(), lastRestored.c_str());
 			}
 
 			//run a merge
@@ -349,11 +353,12 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
 	//now refresh all the keys
 	PrefsFactory::instance()->refreshAllKeys();
 
-	return BackupManager::instance()->sendPostRestoreResponse(lshandle,message);
+	sendPostRestoreResponse(lshandle,message);
+	return true;
 }
 
-bool BackupManager::sendPreBackupResponse(LSHandle* lshandle, LSMessage *message,
-										  const std::list<std::string> fileList)
+void BackupManager::sendPreBackupResponse(LSHandle* lshandle, LSMessage *message,
+										  const std::list<std::string>& fileList) const
 {
 	std::string versionDb = PrefsDb::instance()->getPref("databaseVersion");
 	if (versionDb.empty())
@@ -386,11 +391,9 @@ bool BackupManager::sendPreBackupResponse(LSHandle* lshandle, LSMessage *message
 	if (!LSMessageReply (lshandle, message, response.stringify().c_str(), error)) {
 		PmLogWarning(sysServiceLogContext(),"PRE_BACKUP_CALLBACK_ERROR",0,"Can't send reply to preBackupCallback error: %s",error.what());
 	}
-
-	return true;
 }
 
-bool BackupManager::sendPostRestoreResponse(LSHandle* lshandle, LSMessage *message)
+void BackupManager::sendPostRestoreResponse(LSHandle* lshandle, LSMessage *message)
 {
 	PmLogDebug(sysServiceLogContext(),"Sending response to postRestoreCallback: %s", R"({"returnValue": true})");
 
@@ -398,7 +401,4 @@ bool BackupManager::sendPostRestoreResponse(LSHandle* lshandle, LSMessage *messa
 	if (!LSMessageReply (lshandle, message, R"({"returnValue": true})", error)) {
 		PmLogWarning(sysServiceLogContext(),"POST_RESTORE_CALLBACK_ERROR",0,"Can't send reply to postRestoreCallback error: %s",error.what());
 	}
-
-	return true;
-
 }

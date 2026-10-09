@@ -33,24 +33,17 @@ public:
 	bool validate(const std::string& key, const pbnjson::JValue &value) override;
 	void valueChanged(const std::string& key, const pbnjson::JValue &value) override;
 	pbnjson::JValue valuesForKey(const std::string& key) override;
-	
-	std::string currentLocale() const;
-	std::string currentRegion() const;
-	
+
 private:
 
 	void init();
-	void readCurrentLocaleSetting();
-	void readCurrentRegionSetting();
 	void readLocaleFile();
 	void readRegionFile();
 	
-	bool validateLocale(const pbnjson::JValue &value);
-	bool validateRegion(const pbnjson::JValue &value);
-	void valueChangedLocale(const pbnjson::JValue &value);
-	void valueChangedRegion(const pbnjson::JValue &value);
-	pbnjson::JValue valuesForLocale();
-	pbnjson::JValue valuesForRegion();
+	bool validateLocale(const pbnjson::JValue &value) const;
+	bool validateRegion(const pbnjson::JValue &value) const;
+	pbnjson::JValue valuesForLocale() const;
+	pbnjson::JValue valuesForRegion() const;
 		
 private:
 
@@ -72,9 +65,6 @@ private:
 	
 	LocaleEntryList m_localeEntryList;
 	RegionEntryList m_regionEntryList;
-	std::string m_languageCode;
-	std::string m_countryCode;
-	std::string m_regionCode;
 };
 
 #endif /* LOCALEPREFSHANDLER_H */

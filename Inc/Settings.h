@@ -26,7 +26,7 @@
 /**
   * Schema Error Options
   */
-enum ESchemaErrorOptions
+enum ESchemaErrorOptions : unsigned char
 {
 	EIgnore = 0,            /**< Ignore the schema */
 	EValidateAndContinue,   /**< Validate, Log the error & Continue */

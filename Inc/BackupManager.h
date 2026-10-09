@@ -32,7 +32,7 @@ class BackupManager :  public Singleton<BackupManager>
 	friend class Singleton<BackupManager>;
 
 public:
-	void setServiceHandle(LSHandle* serviceHandle);
+	static void setServiceHandle(LSHandle* serviceHandle);
 
 	void turnOffBackup() { m_doBackupFiles = false; }
 	void turnOnBackup() { m_doBackupFiles = true; }
@@ -55,12 +55,10 @@ private:
 	static bool preBackupCallback( LSHandle* lshandle, LSMessage *message, void *user_data);
 	static bool postRestoreCallback( LSHandle* lshandle, LSMessage *message, void *user_data);
 
-	// (these both return bool so that they can be used more conventiently in ___Callback() e.g.
-	// return (sendPreBackupResponse(...));
 	/// sendPreBackupResponse - made to take a fileList param so as to allow m_backupFiles to be unmodded in case
 	// 							a temporary alternate list is to be used; this gives max flexibility
-	bool sendPreBackupResponse(LSHandle* lshandle, LSMessage *message,const std::list<std::string> fileList);
-	bool sendPostRestoreResponse(LSHandle* lshandle, LSMessage *message);
+	void sendPreBackupResponse(LSHandle* lshandle, LSMessage *message,const std::list<std::string>& fileList) const;
+	static void sendPostRestoreResponse(LSHandle* lshandle, LSMessage *message);
 
 
 	static std::string s_backupKeylistFilename;

@@ -35,7 +35,7 @@ class PrefsFactory : public Singleton<PrefsFactory>
 	friend class Singleton<PrefsFactory>;
 
 public:
-	enum Errors
+	enum Errors : unsigned char
 	{
 		ErrorNone,            // not an error
 		ErrorPrefDoesntExist, // preference by key doesn't exist
@@ -50,8 +50,8 @@ public:
 
 	std::shared_ptr<PrefsHandler> getPrefsHandler(const std::string& key) const;
 	
-	void postPrefChange(const std::string& key,const std::string& value);
-	void postPrefChangeValueIsCompleteString(const std::string& key,const std::string& json_string);
+	void postPrefChange(const std::string& keyStr,const std::string& valueStr);
+	void postPrefChangeValueIsCompleteString(const std::string& keyStr,const std::string& json_string);
 	void runConsistencyChecksOnAllHandlers();
 	
 	/**

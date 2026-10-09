@@ -34,24 +34,36 @@ static bool haveZones()
 	    && Utils::doesExistOnFilesystem("/usr/share/zoneinfo/Asia/Tokyo");
 }
 
+// The suite is single-threaded; these are the only places it touches TZ.
+static const char *tzEnv()
+{
+	// Flawfinder: ignore - compared against what the test set
+	return getenv("TZ"); // NOLINT(concurrency-mt-unsafe)
+}
+
+static void setTz(const char *zone)
+{
+	if (zone)
+		setenv("TZ", zone, 1); // NOLINT(concurrency-mt-unsafe)
+	else
+		unsetenv("TZ"); // NOLINT(concurrency-mt-unsafe)
+	tzset();
+}
+
 // Puts TZ back as the test found it.
 class SavedTz
 {
 public:
 	SavedTz()
 	{
-		const char *tz = getenv("TZ");
+		const char *tz = tzEnv();
 		m_had = (tz != nullptr);
 		if (m_had)
 			m_value = tz;
 	}
 	~SavedTz()
 	{
-		if (m_had)
-			setenv("TZ", m_value.c_str(), 1);
-		else
-			unsetenv("TZ");
-		tzset();
+		setTz(m_had ? m_value.c_str() : nullptr);
 	}
 
 private:
@@ -102,18 +114,16 @@ TEST(ConvertDate, LeavesTzAsItWas)
 	SavedTz saved;
 	std::string result, error;
 
-	setenv("TZ", "Asia/Tokyo", 1);
-	tzset();
+	setTz("Asia/Tokyo");
 	ASSERT_TRUE(TimePrefsHandler::convertDate("2024-01-01 12:00:00", "Europe/Amsterdam",
 	                                          "UTC", result, error)) << error;
-	ASSERT_NE(nullptr, getenv("TZ"));
-	EXPECT_STREQ("Asia/Tokyo", getenv("TZ"));
+	ASSERT_NE(nullptr, tzEnv());
+	EXPECT_STREQ("Asia/Tokyo", tzEnv());
 
-	unsetenv("TZ");
-	tzset();
+	setTz(nullptr);
 	ASSERT_TRUE(TimePrefsHandler::convertDate("2024-01-01 12:00:00", "Europe/Amsterdam",
 	                                          "UTC", result, error)) << error;
-	EXPECT_EQ(nullptr, getenv("TZ"));
+	EXPECT_EQ(nullptr, tzEnv());
 }
 
 // Each conversion sets TZ three times. The old setter freed the previous
@@ -125,8 +135,7 @@ TEST(ConvertDate, RepeatedConversionsAgree)
 	if (!haveZones())
 		GTEST_SKIP() << "host lacks Europe/Amsterdam, UTC or Asia/Tokyo";
 	SavedTz saved;
-	setenv("TZ", "UTC", 1);
-	tzset();
+	setTz("UTC");
 
 	for (int i = 0; i < 4; i++) {
 		std::string result, error;
@@ -134,7 +143,7 @@ TEST(ConvertDate, RepeatedConversionsAgree)
 		                                          "Asia/Tokyo", result, error)) << error;
 		EXPECT_EQ("Mon Jan  1 20:00:00 2024", result);
 	}
-	EXPECT_STREQ("UTC", getenv("TZ"));
+	EXPECT_STREQ("UTC", tzEnv());
 }
 
 TEST(ZoneAbbreviation, FitsOrIsEmpty)

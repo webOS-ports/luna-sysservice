@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <algorithm>
 #include <cstring>
 #include <string>
 
@@ -35,10 +36,9 @@ static bool haveZone(const char *name)
 
 static const TzTransition *findTransition(const TzTransitionList& list, time_t when)
 {
-	for (const TzTransition& t : list)
-		if (t.time == when)
-			return &t;
-	return nullptr;
+	auto it = std::find_if(list.begin(), list.end(),
+	                       [when](const TzTransition& t) { return t.time == when; });
+	return it == list.end() ? nullptr : &*it;
 }
 
 TEST(TzParser, RejectsBadNames)
@@ -74,7 +74,7 @@ TEST(TzParser, ParsesAZoneWithTransitions)
 	EXPECT_STREQ("CET", winter->abbrName);
 
 	for (const TzTransition& t : list)
-		EXPECT_LT(strlen(t.abbrName), static_cast<size_t>(TZ_ABBR_MAX_LEN));
+		EXPECT_NE(nullptr, memchr(t.abbrName, '\0', TZ_ABBR_MAX_LEN)); // terminated inside the buffer
 }
 
 TEST(TzParser, AZoneWithoutTransitionsGetsOneEntry)

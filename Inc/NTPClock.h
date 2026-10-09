@@ -105,12 +105,12 @@ struct NTPClock
 	/**
 	 * Callback for "sntp" child process change state
 	 */
-	static void cbChild(GPid pid, gint status, NTPClock *ntpClock);
+	static void cbChild(GPid pid, gint status, gpointer data);
 
 	/**
 	 * Callback for "sntp" stdout data flow
 	 */
-	static gboolean cbStdout(GIOChannel *channel, GIOCondition cond, NTPClock *ntpClock);
+	static gboolean cbStdout(GIOChannel *channel, GIOCondition cond, gpointer data);
 };
 
 #endif

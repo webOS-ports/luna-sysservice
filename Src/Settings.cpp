@@ -40,42 +40,42 @@ Settings::Settings()
 	(void)load(kSettingsFilePlatform);
 }
 
-#define KEY_STRING(cat,name,var) \
-{\
-	gchar* _vs;\
-	GError* _error = 0;\
-	_vs=g_key_file_get_string(keyfile,cat,name,&_error);\
-	if( !_error && _vs ) { var=(const char*)_vs; g_free(_vs); }\
-	else g_error_free(_error); \
+namespace {
+
+// Each reader leaves var as it is when the key is missing or malformed.
+void readKey(GKeyFile* keyfile, const char* group, const char* key, std::string& var)
+{
+	GError* error = nullptr;
+	gchar* value = g_key_file_get_string(keyfile, group, key, &error);
+	if (!error && value)
+		var = value;
+	g_free(value);
+	if (error)
+		g_error_free(error);
 }
 
-#define KEY_BOOLEAN(cat,name,var) \
-{\
-	gboolean _vb;\
-	GError* _error = 0;\
-	_vb=g_key_file_get_boolean(keyfile,cat,name,&_error);\
-	if( !_error ) { var=_vb; }\
-	else g_error_free(_error); \
+void readKey(GKeyFile* keyfile, const char* group, const char* key, bool& var)
+{
+	GError* error = nullptr;
+	gboolean value = g_key_file_get_boolean(keyfile, group, key, &error);
+	if (!error)
+		var = value;
+	else
+		g_error_free(error);
 }
 
-#define KEY_SCHEMA_ERR_OPTION(cat,name,var) \
-{\
-	int _v;\
-	GError* _error = 0;\
-	_v=g_key_file_get_integer(keyfile,cat,name,&_error);\
-	if( !_error ) { (void)schemaErrorOptionFromInt(_v, var); }\
-	else g_error_free(_error); \
+void readKey(GKeyFile* keyfile, const char* group, const char* key, ESchemaErrorOptions& var)
+{
+	GError* error = nullptr;
+	int value = g_key_file_get_integer(keyfile, group, key, &error);
+	if (error) {
+		g_error_free(error);
+		return;
+	}
+	(void)schemaErrorOptionFromInt(value, var);
 }
 
-#define KEY_DOUBLE(cat,name,var) \
-{\
-	double _v;\
-	GError* _error = 0;\
-	_v=g_key_file_get_double(keyfile,cat,name,&_error);\
-	if( !_error ) { var=_v; }\
-	else g_error_free(_error); \
-}
-
+} // namespace
 
 bool schemaErrorOptionFromInt(int value, ESchemaErrorOptions& option)
 {
@@ -105,16 +105,16 @@ bool Settings::load(const char* settingsFile)
 		return false;
 	}
 
-	KEY_BOOLEAN("Debug","turnOnNovacomAtStart",m_turnNovacomOnAtStartup);
-	KEY_BOOLEAN("Debug","saveLastBackedUpTempDb",m_saveLastBackedUpTempDb);
-	KEY_BOOLEAN("Debug","saveLastRestoredTempDb",m_saveLastRestoredTempDb);
-	KEY_STRING("Debug","logLevel",m_logLevel);
+	readKey(keyfile, "Debug","turnOnNovacomAtStart",m_turnNovacomOnAtStartup);
+	readKey(keyfile, "Debug","saveLastBackedUpTempDb",m_saveLastBackedUpTempDb);
+	readKey(keyfile, "Debug","saveLastRestoredTempDb",m_saveLastRestoredTempDb);
+	readKey(keyfile, "Debug","logLevel",m_logLevel);
 
-	KEY_BOOLEAN("ImageService","useComPalmImage2",m_useComPalmImage2);
-	KEY_STRING("ImageService","comPalmImage2Binary",m_comPalmImage2BinaryFile);
+	readKey(keyfile, "ImageService","useComPalmImage2",m_useComPalmImage2);
+	readKey(keyfile, "ImageService","comPalmImage2Binary",m_comPalmImage2BinaryFile);
 
-	KEY_SCHEMA_ERR_OPTION("General", "schemaValidationOption", schemaValidationOption);
-	KEY_BOOLEAN("General", "switchTimezoneOnManualTime", switchTimezoneOnManualTime);
+	readKey(keyfile, "General", "schemaValidationOption", schemaValidationOption);
+	readKey(keyfile, "General", "switchTimezoneOnManualTime", switchTimezoneOnManualTime);
 
 	g_key_file_free( keyfile );
 	return true;
@@ -122,7 +122,7 @@ bool Settings::load(const char* settingsFile)
 
 bool Settings::parseCommandlineOptions(int argc, char** argv)
 {
-	gchar* logLevelStr = NULL;
+	gchar* logLevelStr = nullptr;
 	GError* err = nullptr;
 
 	std::unique_ptr<GError*, void(*)(GError**)>
@@ -131,8 +131,8 @@ bool Settings::parseCommandlineOptions(int argc, char** argv)
 			context(g_option_context_new(nullptr), g_option_context_free);
 
 	GOptionEntry entries[] = {
-		{ "logger", 'l', 0, G_OPTION_ARG_STRING,  &logLevelStr, "log level", "level"},
-		{ NULL }
+		{ "logger", 'l', 0, G_OPTION_ARG_STRING, static_cast<gpointer>(&logLevelStr), "log level", "level" },
+		{ nullptr, 0, 0, G_OPTION_ARG_NONE, nullptr, nullptr, nullptr }
 	};
 
 	g_option_context_add_main_entries(context.get(), entries, nullptr);

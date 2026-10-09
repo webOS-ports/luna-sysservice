@@ -37,8 +37,9 @@ bool readImageWithPrescale(QImageReader& reader, QImage& image, double& prescale
 		prescaleFactor = 0.5;
 
 	if(!(std::fabs(prescaleFactor - 1.0) < 0.1))
-		reader.setScaledSize(QSize(reader.size().width() * prescaleFactor, reader.size().height() * prescaleFactor));
+		reader.setScaledSize(QSize(static_cast<int>(reader.size().width() * prescaleFactor),
+		                           static_cast<int>(reader.size().height() * prescaleFactor)));
 	PmLogDebug(sysServiceLogContext(), "prescale: %f", prescaleFactor);
 
-	return reader.read(&image);
+	return reader.read(&image); // Flawfinder: ignore - QImageReader::read, not read(2)
 }

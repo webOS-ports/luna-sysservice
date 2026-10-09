@@ -29,6 +29,11 @@
 
 using namespace pbnjson;
 
+namespace {
+// GIOCondition is a set of flags; the C++ cast of a combination is fine.
+constexpr GIOCondition kInOrHup = static_cast<GIOCondition>(G_IO_IN | G_IO_HUP);
+}
+
 void NTPClock::postNTP(time_t offset)
 {
 	PmLogDebug(sysServiceLogContext(), "post NTP offset %ld", offset);
@@ -113,13 +118,14 @@ bool NTPClock::requestNTP(LSMessage *message /* = NULL */)
 		ntpServerTimeout = "2"; // seconds
 	}
 
+	// g_spawn takes gchar** but does not modify the strings
 	gchar *argv[] = {
-		(gchar *)"sntp",
-		(gchar *)"-t",
-		(gchar *)ntpServerTimeout.c_str(),
-		(gchar *)"-d",
-		(gchar *)ntpServer.c_str(),
-		0
+		const_cast<gchar *>("sntp"),
+		const_cast<gchar *>("-t"),
+		const_cast<gchar *>(ntpServerTimeout.c_str()),
+		const_cast<gchar *>("-d"),
+		const_cast<gchar *>(ntpServer.c_str()),
+		nullptr
 	};
 
 	PmLogDebug(sysServiceLogContext(),
@@ -161,7 +167,7 @@ bool NTPClock::requestNTP(LSMessage *message /* = NULL */)
 		return false;
 	}
 
-	sntpChildWatchId = g_child_watch_add( sntpPid, (GChildWatchFunc)cbChild, this);
+	sntpChildWatchId = g_child_watch_add(sntpPid, cbChild, this);
 
 	GIOChannel *chOut = g_io_channel_unix_new(fdOut);
 
@@ -172,7 +178,7 @@ bool NTPClock::requestNTP(LSMessage *message /* = NULL */)
 	g_io_channel_set_flags(chOut, G_IO_FLAG_NONBLOCK, NULL);
 
 	sntpChannel = chOut;
-	sntpWatchId = g_io_add_watch( chOut, GIOCondition (G_IO_IN | G_IO_HUP), (GIOFunc)cbStdout, this);
+	sntpWatchId = g_io_add_watch(chOut, kInOrHup, cbStdout, this);
 
 	return true;
 }
@@ -203,8 +209,9 @@ void NTPClock::drainChannel()
 }
 
 // callbacks
-void NTPClock::cbChild(GPid pid, gint status, NTPClock *ntpClock)
+void NTPClock::cbChild(GPid pid, gint status, gpointer data)
 {
+	NTPClock *ntpClock = static_cast<NTPClock *>(data);
 	// move to new state
 	ntpClock->sntpPid = -1;
 	ntpClock->sntpChildWatchId = 0;
@@ -284,8 +291,9 @@ void NTPClock::cbChild(GPid pid, gint status, NTPClock *ntpClock)
 	sntpOutput.clear();
 }
 
-gboolean NTPClock::cbStdout(GIOChannel *channel, GIOCondition cond, NTPClock *ntpClock)
+gboolean NTPClock::cbStdout(GIOChannel *channel, GIOCondition cond, gpointer data)
 {
+	NTPClock *ntpClock = static_cast<NTPClock *>(data);
 	(void) cond; // G_IO_IN and G_IO_HUP can arrive combined; just read
 
 	while (true)

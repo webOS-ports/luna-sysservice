@@ -34,9 +34,9 @@ class OsInfoService : public Singleton<OsInfoService>
 public:
 	typedef std::map<std::string, nyx_os_info_query_t> command_map_t;
 
-	void setServiceHandle(LSHandle* serviceHandle);
+	static void setServiceHandle(LSHandle* serviceHandle);
 
-	static bool cbGetOsInformation(LSHandle* lshandle, LSMessage *message, void *user_data);
+	static bool cbGetOsInformation(LSHandle* lsHandle, LSMessage *message, void *user_data);
 
 private:
 	OsInfoService();

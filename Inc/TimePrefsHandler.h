@@ -31,8 +31,8 @@
 
 #define        DEFAULT_NTP_SERVER    "us.pool.ntp.org"
 
-class TimeZoneInfo;
-class PreferredZones;
+struct TimeZoneInfo;
+struct PreferredZones;
 
 //a container only
 class NitzParameters
@@ -50,10 +50,7 @@ public:
     time_t _localtimeStamp;
 
     NitzParameters();
-    NitzParameters(struct tm& timeStruct,int offset,int dst,int mcc,int mnc,bool timevalid,bool tzvalid,bool dstvalid,uint32_t remotetimeStamp);
-
-    void stampTime();
-    bool valid(uint32_t timeThreshold=60);
+    NitzParameters(const struct tm& timeStruct,int offset,int dst,int mcc,int mnc,bool timevalid,bool tzvalid,bool dstvalid);
 };
 
 class TimePrefsHandler : public PrefsHandler
@@ -62,12 +59,12 @@ class TimePrefsHandler : public PrefsHandler
 public:
 
     //DO NOT CHANGE THE VALUES!!!!
-    enum {
+    enum : unsigned char {
         NITZ_TimeEnable = 1,
         NITZ_TZEnable = 2
     };
 
-    enum {
+    enum : unsigned char {
         NITZ_Unknown,
         NITZ_Valid,
         NITZ_Invalid
@@ -86,9 +83,9 @@ public:
 
     static TimePrefsHandler *instance() { return s_inst; }
     static bool cbLocaleHandler(LSHandle*, LSMessage*, void*);
-    pbnjson::JValue timeZoneListAsJson();
-    pbnjson::JValue timeZoneListAsJson(const std::string& countryCode, const std::string& locale);
-    bool isValidTimeZoneName(const std::string& tzName);
+    static pbnjson::JValue timeZoneListAsJson();
+    static pbnjson::JValue timeZoneListAsJson(const std::string& countryCode, const std::string& locale);
+    static bool isValidTimeZoneName(const std::string& tzName);
 
     void postSystemTimeChange();
     void postBroadcastEffectiveTimeChange();
@@ -98,21 +95,21 @@ public:
 
     const TimeZoneInfo* currentTimeZone() const { return m_cpCurrentTimeZone; }
     std::string currentTimeZoneName() const;
-    time_t offsetToUtcSecs() const;    
+    static time_t offsetToUtcSecs();
 
     void setHourFormat(const std::string& formatStr);
 
     bool isManualTimeUsed() const { return !(m_nitzSetting & NITZ_TimeEnable); }
     bool isSystemTimeBroadcastEffective() const { return isManualTimeUsed() || !m_broadcastTime.avail(); }
-    bool isNITZTimeEnabled() { return (m_nitzSetting & NITZ_TimeEnable); }
-    bool isNITZTZEnabled() { return (m_nitzSetting & NITZ_TZEnable) && m_nitzTimeZoneAvailable; }
-    bool isNITZDisabled() { return ((!(m_nitzSetting & NITZ_TimeEnable)) && (!(m_nitzSetting & NITZ_TZEnable))); }
+    bool isNITZTimeEnabled() const { return (m_nitzSetting & NITZ_TimeEnable); }
+    bool isNITZTZEnabled() const { return (m_nitzSetting & NITZ_TZEnable) && m_nitzTimeZoneAvailable; }
+    bool isNITZDisabled() const { return ((!(m_nitzSetting & NITZ_TimeEnable)) && (!(m_nitzSetting & NITZ_TZEnable))); }
     const std::string &getSystemTimeSource() const { return m_systemTimeSourceTag; }
     void manualTimeZoneChanged();
     bool setNITZTimeEnable(bool time_en);    //returns old value
     bool setNITZTZEnable(bool tz_en);    //returns old value
 
-    int  getLastNITZValidity() { return m_lastNitzValidity;}
+    int  getLastNITZValidity() const { return m_lastNitzValidity;}
     void markLastNITZInvalid() { m_lastNitzValidity = NITZ_Invalid;}
     void markLastNITZValid() { m_lastNitzValidity = NITZ_Valid;}
     void clearLastNITZValidity() { m_lastNitzValidity = NITZ_Unknown;}
@@ -121,9 +118,9 @@ public:
 
     std::list<std::string> getTimeZonesForOffset(int offset);
 
-    bool isDriftPeriodDisabled() { return (m_driftPeriod == m_driftPeriodDisabled); }
-    time_t getDriftPeriod() { return m_driftPeriod; }
-    void updateDriftPeriod(std::string hrValue);
+    bool isDriftPeriodDisabled() const { return (m_driftPeriod == m_driftPeriodDisabled); }
+    time_t getDriftPeriod() const { return m_driftPeriod; }
+    void updateDriftPeriod(const std::string& hrValue);
 
     void switchTimeZone(bool b_recover);
 
@@ -159,8 +156,6 @@ public:
     Signal<time_t, time_t> compensateSuspendedTimeToClocks;
 
 
-    static std::string getQualifiedTZIdFromName(const std::string& tzName);
-    static std::string getQualifiedTZIdFromJson(const std::string& jsonTz);
     static std::string tzNameFromJsonValue(const pbnjson::JValue &pValue);
     static std::string tzCityNameFromJsonValue(const pbnjson::JValue &pValue);
     static std::string tzNameFromJsonString(const std::string& TZJson);
@@ -223,13 +218,13 @@ public:
     static bool cbServiceStateTracker(LSHandle* lsHandle, LSMessage *message,
                                 void *user_data);
 
-    static bool cbSetBroadcastTime(LSHandle* lsHandle, LSMessage *message,
+    static bool cbSetBroadcastTime(LSHandle* handle, LSMessage *message,
                                    void *userData);
 
-    static bool cbGetBroadcastTime(LSHandle* lsHandle, LSMessage *message,
+    static bool cbGetBroadcastTime(LSHandle* handle, LSMessage *message,
                                    void *userData);
 
-    static bool cbGetEffectiveBroadcastTime(LSHandle* lsHandle, LSMessage *message,
+    static bool cbGetEffectiveBroadcastTime(LSHandle* handle, LSMessage *message,
                                             void *userData);
 
     static bool getSystemUptime(LSHandle* pHandle, LSMessage* message, void* pUserData);
@@ -248,7 +243,7 @@ public:
      */
     void handleNotAvailableSource(const std::string& source);
 
-    void updateTimeZoneEnv();
+    void updateTimeZoneEnv() const;
 
     ~TimePrefsHandler() override;
 
@@ -259,12 +254,10 @@ private:
     const TimeZoneInfo* timeZone_ZoneFromOffset(int offset,int dstValue=1,int mcc=0) const;
     const TimeZoneInfo* timeZone_GenericZoneFromOffset(int offset) const;
 
-    const TimeZoneInfo* timeZone_ZoneFromMCC(int mcc,int mnc) const;
+    const TimeZoneInfo* timeZone_ZoneFromMCC(int mcc) const;
     const TimeZoneInfo* timeZone_ZoneFromName(const std::string& name, const std::string& city=std::string()) const;
 
-    const TimeZoneInfo* timeZone_GetDefaultZoneFailsafe();
-
-    bool                 isCountryAcrossMultipleTimeZones(const TimeZoneInfo& tzinfo) const;
+    static bool          isCountryAcrossMultipleTimeZones(const TimeZoneInfo& tzinfo);
 
     void readCurrentNITZSettings();
     void readCurrentTimeSettings();
@@ -272,8 +265,7 @@ private:
     void setManualTimeZoneInfo();
     void setTimeZone(const TimeZoneInfo * pZoneInfo);       //this one sets it in the prefs db and then calls systemSetTimeZone
     pbnjson::JValue getTimeZoneByLocale(std::string& locale);
-    void systemSetTimeZone(const std::string &tzFileActual,
-                           const TimeZoneInfo &zoneInfo);   //this one does the OS work to set the timezone
+    void systemSetTimeZone(const std::string &tzFileActual) const;   //this one does the OS work to set the timezone
     bool systemSetTime(time_t deltaTime, const std::string &source);
 
     /**
@@ -286,7 +278,7 @@ private:
      * Attach system-time information to json object.
      * Useful for building getSystemTime response
      */
-    void attachSystemTime(pbnjson::JValue &json);
+    void attachSystemTime(pbnjson::JValue &json) const;
 
     static bool jsonUtil_ZoneFromJson(const pbnjson::JValue &json,TimeZoneInfo& r_zoneInfo);
 
@@ -298,15 +290,15 @@ private:
 #define NITZHANDLER_FLAGBIT_SKIP_DST_SELECT    (1 << 4)
 #define NITZHANDLER_FLAGBIT_IGNORE_TIL_SET    (1 << 5)
 
-#define NITZHANDLER_RETURN_ERROR            -1
+#define NITZHANDLER_RETURN_ERROR            (-1)
 #define NITZHANDLER_RETURN_SUCCESS            1
-    int  nitzHandlerEntry(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
-    int  nitzHandlerTimeValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
+    static int nitzHandlerEntry(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
+    int  nitzHandlerTimeValue(NitzParameters& nitz,const int& flags,std::string& r_statusMsg);
     int     nitzHandlerOffsetValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
-    int  nitzHandlerDstValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
-    int  nitzHandlerExit(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
+    static int nitzHandlerDstValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
+    static int nitzHandlerExit(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
 
-    void  nitzHandlerSpecialCaseOffsetValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
+    static void nitzHandlerSpecialCaseOffsetValue(NitzParameters& nitz);
 
 #define TIMEOUTFN_RESETCYCLE        1
 #define TIMEOUTFN_ENDCYCLE            2
@@ -316,14 +308,14 @@ private:
     void startTimeoutCycle(unsigned int timeoutInSeconds);
     void timeout_destroy(gpointer userData);
 
-    int  timeoutNitzHandlerEntry(NitzParameters& nitz,int& flags,std::string& r_statusMgs);
-    int  timeoutNitzHandlerTimeValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
-    int     timeoutNitzHandlerOffsetValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
-    int  timeoutNitzHandlerDstValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
-    int  timeoutNitzHandlerExit(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
+    int  timeoutNitzHandlerEntry(NitzParameters& nitz,int& flags,std::string& r_statusMsg) const;
+    int  timeoutNitzHandlerTimeValue(const NitzParameters& nitz,const int& flags,std::string& r_statusMsg);
+    int     timeoutNitzHandlerOffsetValue(NitzParameters& nitz,const int& flags,std::string& r_statusMsg);
+    static int timeoutNitzHandlerDstValue(NitzParameters& nitz,const int& flags,std::string& r_statusMsg);
+    static int timeoutNitzHandlerExit(NitzParameters& nitz,int& flags,std::string& r_statusMsg);
 
     void setPeriodicTimeSetWakeup();
-    bool isNTPAllowed();
+    static bool isNTPAllowed();
 
     /**
      * Amount of seconds that increases during whole up-time
@@ -347,7 +339,7 @@ private:
     void            tzTransTimerAnew(time_t timeout = -1);
     static gboolean tzTrans(gpointer userData);
     static void     tzTransCancel(gpointer userData);
-        int enableNetworkTimeSync(bool enable);
+    static int enableNetworkTimeSync(bool enable);
 
 private:
 

@@ -18,10 +18,13 @@
 #include <uriparser/Uri.h> 
 #include "UrlRep.h"
 
-#define URI_TEXT_RANGE_TO_STRING(textRange)			   					  \
-	textRange.first ? std::string(textRange.first,						  \
-								  textRange.afterLast - textRange.first)  \
-	: std::string()
+#include <vector>
+
+static std::string URI_TEXT_RANGE_TO_STRING(const UriTextRangeA& textRange)
+{
+	return textRange.first ? std::string(textRange.first, textRange.afterLast - textRange.first)
+	                       : std::string();
+}
 
 UrlRep UrlRep::fromUrl(const char* uri)
 {
@@ -94,31 +97,24 @@ UrlRep UrlRep::fromUrl(const char* uri)
 
 std::string unescape(const std::string& encoded) {
 	
-	char * buffer = new char[strlen(encoded.c_str())+1];
-	if (buffer == NULL)
-		return std::string("");
-	strcpy(buffer,encoded.c_str());
-	uriUnescapeInPlaceA(buffer);
-	std::string r(buffer);
-	delete[] buffer;
-	return r;
+	// up to the first NUL, as the C string always was
+	const std::string text = encoded.substr(0, encoded.find('\0'));
+	std::vector<char> buffer(text.begin(), text.end());
+	buffer.push_back('\0');
+	uriUnescapeInPlaceA(buffer.data());
+	return std::string(buffer.data());
 }
 
 std::string escape(const std::string& source) {
 	
 	if (source.length() == 0)
 		return std::string("");
-	char * buffer = new char[6*(source.length())+1];
-	if (buffer == NULL)
+	// uriEscapeA needs room for 6 output characters per input one
+	std::vector<char> buffer(6 * source.length() + 1);
+	const char * term = uriEscapeA(source.c_str(), buffer.data(), false, false);
+	if (term == NULL)
 		return std::string("");
-	char * term = uriEscapeA(source.c_str(),buffer,false,false);
-	if (term == NULL) {
-                delete[] buffer;
-		return std::string("");
-        }
-	std::string r(buffer);
-	delete[] buffer;
-	return r;
+	return std::string(buffer.data());
 }
 
   

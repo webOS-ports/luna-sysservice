@@ -32,18 +32,18 @@ class TimeZoneService : public Singleton<TimeZoneService>
 
 public:
 	struct UserTzData;
-	void setServiceHandle(LSHandle* serviceHandle);
+	static void setServiceHandle(LSHandle* serviceHandle);
 
-	time_t nextTzTransition(const std::string& zoneId) const;
+	static time_t nextTzTransition(const std::string& zoneId);
 
-	static bool cbGetTimeZoneRules(LSHandle* lshandle, LSMessage *message,
+	static bool cbGetTimeZoneRules(LSHandle* lsHandle, LSMessage *message,
 								   void *user_data);
-	static bool cbGetTimeZoneFromEasData(LSHandle* lshandle, LSMessage *message,
+	static bool cbGetTimeZoneFromEasData(LSHandle* lsHandle, LSMessage *message,
 										 void *user_data);
-	static bool cbCreateTimeZoneFromEasData(LSHandle* lshandle, LSMessage *message,
+	static bool cbCreateTimeZoneFromEasData(LSHandle* lsHandle, LSMessage *message,
 										 void *user_data);
 	static time_t getTimeZoneBaseOffset(const std::string &tzName);
-	bool createTimeZoneFromEasData(LSHandle* lsHandle, UserTzData* a_userTz = NULL);
+	static bool createTimeZoneFromEasData(const UserTzData* ap_userTz = NULL);
 
 	struct EasSystemTime {
 		bool valid = false;
@@ -99,14 +99,14 @@ private:
 private:
 	TimeZoneService() = default;
 
-	pbnjson::JValue getTimeZoneRules(const TimeZoneEntryList& entries);
-	TimeZoneResultList getTimeZoneRuleOne(const TimeZoneEntry& entry);
+	static pbnjson::JValue getTimeZoneRules(const TimeZoneEntryList& entries);
+	static TimeZoneResultList getTimeZoneRuleOne(const TimeZoneEntry& entry);
 	static void readEasDate(const pbnjson::JValue &obj, EasSystemTime& time);
-	static void readTimeZoneRule(const pbnjson::JValue &obj, EasSystemTime& time);
+	static void readTimeZoneRule(const pbnjson::JValue &obj, EasSystemTime& tzrule);
 	static void updateEasDateDayOfMonth(EasSystemTime& time, int year);
 
-	static int compareEasRules(EasSystemTime& startTime,
-					EasSystemTime& endTime,
+	static int compareEasRules(const EasSystemTime& startTime,
+					const EasSystemTime& endTime,
 					int diffBias);
 
 	static bool createManualTimeZone(UserTzData& a_userTz);

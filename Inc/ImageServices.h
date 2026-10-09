@@ -27,10 +27,10 @@ class ImageServices : public Singleton<ImageServices>
 	friend class Singleton<ImageServices>;
 
 public:
-	bool isValid() { return m_serviceHandle;}
+	bool isValid() const { return m_serviceHandle; }
 	bool init(GMainLoop *loop);
 
-	bool ezResize(const std::string& pathToSourceFile,
+	static bool ezResize(const std::string& pathToSourceFile,
 				  const std::string& pathToDestFile, const char* destType,
 				  uint32_t widthFinal,uint32_t heightFinal,
 				  std::string& r_errorText);
@@ -43,10 +43,10 @@ protected:
 private:
 	ImageServices();
 
-	bool convertImage(const std::string& pathToSourceFile,
+	static bool convertImage(const std::string& pathToSourceFile,
 					  const std::string& pathToDestFile, const char* destType,
 					  std::string& r_errorText);
-	bool convertImage(const std::string& pathToSourceFile,
+	static bool convertImage(const std::string& pathToSourceFile,
 					  const std::string& pathToDestFile, const char* destType,
 					  double focusX, double focusY, double scale,
 					  uint32_t widthFinal, uint32_t heightFinal,

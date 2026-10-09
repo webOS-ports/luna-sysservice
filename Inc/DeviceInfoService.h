@@ -34,8 +34,8 @@ class DeviceInfoService : public Singleton<DeviceInfoService>
 public:
 	typedef std::map<std::string, nyx_device_info_type_t> command_map_t;
 
-	void setServiceHandle(LSHandle* serviceHandle);
-	static bool cbGetDeviceInformation(LSHandle* lshandle, LSMessage *message, void *user_data);
+	static void setServiceHandle(LSHandle* serviceHandle);
+	static bool cbGetDeviceInformation(LSHandle* lsHandle, LSMessage *message, void *user_data);
 
 private:
 	DeviceInfoService() = default;
