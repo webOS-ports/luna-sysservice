@@ -88,6 +88,10 @@ void outputQtMessages(QtMsgType type, const QMessageLogContext &context, const Q
 					   "%s", text.constData());
 #endif
 			break;
+		case QtInfoMsg:
+			PmLogInfo(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", function),
+					  "%s", text.constData());
+			break;
 		case QtWarningMsg:
 			PmLogWarning(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", function),
 						 "%s", text.constData());

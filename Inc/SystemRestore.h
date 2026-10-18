@@ -47,6 +47,9 @@ public:
 
 	bool isRingtoneSettingConsistent();
 	bool isWallpaperSettingConsistent();
+	// The check isWallpaperSettingConsistent() makes on the stored value: a
+	// JSON object whose "wallpaperFile" is an image that can be read.
+	static bool isWallpaperPrefConsistent(const std::string& wallpaperRawPref);
 	
 	void refreshDefaultSettings();
 	
