@@ -34,6 +34,7 @@
 #include "TimePrefsHandler.h"
 #include "BuildInfoHandler.h"
 #include "RingtonePrefsHandler.h"
+#include "WallpaperPrefsHandler.h"
 
 #include "UrlRep.h"
 #include "JSONUtils.h"
@@ -119,6 +120,7 @@ void PrefsFactory::setServiceHandle(LSHandle* serviceHandle)
 	registerPrefHandler(std::make_shared<TimePrefsHandler>(serviceHandle));
 	registerPrefHandler(std::make_shared<BuildInfoHandler>(serviceHandle));
 	registerPrefHandler(std::make_shared<RingtonePrefsHandler>(serviceHandle));
+	registerPrefHandler(std::make_shared<WallpaperPrefsHandler>(serviceHandle));
 }
 
 std::shared_ptr<PrefsHandler> PrefsFactory::getPrefsHandler(const std::string& key) const

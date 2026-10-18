@@ -324,7 +324,11 @@ bool SystemRestore::isRingtoneSettingConsistent()
 
 bool SystemRestore::isWallpaperSettingConsistent()
 {
-	std::string wallpaperRawPref = PrefsDb::instance()->getPref("wallpaper");
+	return isWallpaperPrefConsistent(PrefsDb::instance()->getPref("wallpaper"));
+}
+
+bool SystemRestore::isWallpaperPrefConsistent(const std::string& wallpaperRawPref)
+{
 	std::string wallpaperFileAndPath;
 	
 	bool rc=false;

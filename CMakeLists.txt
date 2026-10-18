@@ -69,6 +69,9 @@ if (NOT Qt6_FOUND)
      pkg_check_modules(QtGui REQUIRED Qt5Gui)
      include_directories(${QtGui_INCLUDE_DIRS})
 endif()
+# The code LG kept for Qt (the wallpaper file check in SystemRestore, Qt's
+# messages into PmLog) is under WEBOS_QT, and Qt is always found here.
+webos_add_compiler_flags(ALL -DWEBOS_QT)
 
 # -- check for uriparser
 pkg_check_modules(URIPARSER REQUIRED liburiparser)
