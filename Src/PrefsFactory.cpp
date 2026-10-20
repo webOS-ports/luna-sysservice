@@ -61,15 +61,15 @@ static bool cbSwInfo(LSHandle* lsHandle, LSMessage* message, void* user_data);
  */
 
 static LSMethod s_methods[] = {
-	{ "setPreferences", cbSetPreferences },
-	{ "getPreferences", cbGetPreferences },
-	{ "getPreferenceValues", cbGetPreferenceValues },
-	{ 0, 0 }
+	{ "setPreferences", cbSetPreferences, LUNA_METHOD_FLAGS_NONE },
+	{ "getPreferences", cbGetPreferences, LUNA_METHOD_FLAGS_NONE },
+	{ "getPreferenceValues", cbGetPreferenceValues, LUNA_METHOD_FLAGS_NONE },
+	{ nullptr, nullptr, LUNA_METHOD_FLAGS_NONE }
 };
 
 static LSMethod q_methods[] = {
-	{ "query", cbSwInfo},
-	{ 0,0}
+	{ "query", cbSwInfo, LUNA_METHOD_FLAGS_NONE },
+	{ nullptr, nullptr, LUNA_METHOD_FLAGS_NONE }
 };
 
 PrefsFactory::PrefsFactory()
@@ -78,23 +78,22 @@ PrefsFactory::PrefsFactory()
 	PrefsDb::instance();
 }
 
-std::string exec(std::string command)
+// Runs "program arg" (program looked up in PATH, no shell) and returns what
+// it wrote to stdout, or "" if it could not be run.
+static std::string commandOutput(const char* program, const char* arg)
 {
-	char buffer[128];
-	std::string result = "";
-
-	FILE* pipe = popen(command.c_str(), "r");
-	if (!pipe)
+	// g_spawn takes gchar** but does not modify the strings
+	gchar* argv[] = { const_cast<gchar*>(program), const_cast<gchar*>(arg), nullptr };
+	gchar* out = nullptr;
+	GError* error = nullptr;
+	if (!g_spawn_sync(nullptr, argv, nullptr, G_SPAWN_SEARCH_PATH, nullptr, nullptr,
+	                  &out, nullptr, nullptr, &error))
 	{
-	return "";
+		g_error_free(error);
+		return "";
 	}
-	while (!feof(pipe)) {
-
-	if (fgets(buffer, 128, pipe) != NULL)
-		result += buffer;
-	}
-
-	pclose(pipe);
+	std::string result = out ? out : "";
+	g_free(out);
 	return result;
 }
 
@@ -145,7 +144,6 @@ void PrefsFactory::postPrefChange(const std::string& keyStr,const std::string& v
 {
 	LSSubscriptionIter *iter=NULL;
 	LSError lserror;
-	LSHandle * lsHandle;
 
 	LSErrorInit(&lserror);
 
@@ -160,7 +158,7 @@ void PrefsFactory::postPrefChange(const std::string& keyStr,const std::string& v
 
 	bool retVal = LSSubscriptionAcquire(m_serviceHandle, keyStr.c_str(), &iter, &lserror);
 	if (retVal) {
-		lsHandle = m_serviceHandle;
+		LSHandle * lsHandle = m_serviceHandle;
 		while (LSSubscriptionHasNext(iter)) {
 
 			LSMessage *message = LSSubscriptionNext(iter);
@@ -183,11 +181,9 @@ void PrefsFactory::postPrefChangeValueIsCompleteString(const std::string& keyStr
 {
 	LSSubscriptionIter *iter=NULL;
 	LSError lserror;
-	LSHandle * lsHandle;
 
 	LSErrorInit(&lserror);
-	//std::string reply = std::string("{ \"")+keyStr+std::string("\":")+valueStr+std::string("}");
-	const std::string reply = json_string;
+	const std::string& reply = json_string;
 	//**DEBUG validate for correct UTF-8 output
 	if (!g_utf8_validate (reply.c_str(), -1, NULL))
 	{
@@ -196,7 +192,7 @@ void PrefsFactory::postPrefChangeValueIsCompleteString(const std::string& keyStr
 
 	bool retVal = LSSubscriptionAcquire(m_serviceHandle, keyStr.c_str(), &iter, &lserror);
 	if (retVal) {
-		lsHandle = m_serviceHandle;
+		LSHandle * lsHandle = m_serviceHandle;
 		while (LSSubscriptionHasNext(iter)) {
 
 			LSMessage *message = LSSubscriptionNext(iter);
@@ -312,7 +308,7 @@ Example response for a failed call:
 \endcode
 */
 static bool cbSetPreferences(LSHandle* lsHandle, LSMessage* message,
-							 void* user_data)
+							 void* /*user_data*/)
 {
 	bool success = true;
 	std::string errorText;
@@ -435,7 +431,7 @@ static bool cbSwInfo(LSHandle *lsHandle, LSMessage *message, void *)
 				return true;
 			}
 		}
-		std::string nodejsversion = exec("node -v");
+		std::string nodejsversion = commandOutput("node", "-v");
 		if (nodejsversion.empty())
 		{
 			reply = JObject{{"returnValue", false}, {"errorText", "Failed to get nodejs version"}};
@@ -446,14 +442,14 @@ static bool cbSwInfo(LSHandle *lsHandle, LSMessage *message, void *)
 			nodejsversion.erase(std::remove(nodejsversion.begin(), nodejsversion.end(), '\n'), nodejsversion.end());
 			allver.push_back(nodejsversion);
 		}
-		std::string nodejs6version = exec("node6 -v");
+		std::string nodejs6version = commandOutput("node6", "-v");
 		if (!nodejs6version.empty())
 		{
 			nodejs6version.erase(std::remove(nodejs6version.begin(), nodejs6version.end(), '\n'), nodejs6version.end());
 			allver.push_back(nodejs6version);
 		}
 		pbnjson::JValue version_array = pbnjson::JArray();
-		for (std::string name : allver)
+		for (const std::string& name : allver)
 		{
 			version_array << pbnjson::JValue(name);
 		}
@@ -480,7 +476,8 @@ static bool quotesRequired(const std::string& value)
 	if (val_str != pEnd) {
 		isQuotes = false;			// maybe number, will continue check
 		while (*pEnd != '\0') {
-			if (!isspace(*pEnd)) {		// if we have not spaces symbols after number => we have string
+			// if we have not spaces symbols after number => we have string
+			if (!isspace(static_cast<unsigned char>(*pEnd))) {
 				isQuotes = true;
 				break;
 			}
@@ -508,10 +505,26 @@ static bool quotesRequired(const std::string& value)
 				isQuotes = false;
 			}
 			break;
+		default:
+			break;
 		}
 	}
 
 	return isQuotes;
+}
+
+JValue PrefsFactory::valueFromDbString(const std::string& stored)
+{
+	JValue value = JDomParser::fromString(stored);
+	if (value.isValid())
+		return value;
+
+	// not JSON: a bare string, or a json primitive (number, true, ...)
+	if (quotesRequired(stored))
+		return JValue(stored);
+
+	JValue arr = JDomParser::fromString("[" + stored + "]");
+	return arr.isValid() ? arr[0] : arr;
 }
 
 /*!
@@ -626,30 +639,13 @@ static bool cbGetPreferences(LSHandle* lsHandle, LSMessage* message, void*)
 	std::string errorCode;
 	for (std::map<std::string, std::string>::const_iterator it = resultMap.begin();
 		 it != resultMap.end(); ++it) {
-		JValue value = JDomParser::fromString((*it).second);
-		if (value.isValid()) {
-			PmLogDebug(sysServiceLogContext(),"resultMap: [%s] -> [---, length %zu]",(*it).first.c_str(),(*it).second.size());
-			reply.put((*it).first, value);
+		JValue value = PrefsFactory::valueFromDbString((*it).second);
+		if (!value.isValid()) {
+			errorCode = value.errorString();
+			break;
 		}
-		else {
-			// not JSON, try to work with json primitive (ex. string, number)
-			std::string primitive;
-			if (quotesRequired((*it).second)) {
-				primitive = "[\"" + (*it).second + "\"]";
-			}
-			else {
-				primitive = "[" + (*it).second + "]";
-			}
-
-			JValue arr = JDomParser::fromString(primitive);
-			if (arr.isValid()) {
-				reply.put((*it).first, arr[0]);
-			}
-			else {
-				errorCode = arr.errorString();
-				break;
-			}
-		}
+		PmLogDebug(sysServiceLogContext(),"resultMap: [%s] -> [---, length %zu]",(*it).first.c_str(),(*it).second.size());
+		reply.put((*it).first, value);
 	}
 
 	if (errorCode.empty()) {
@@ -736,7 +732,7 @@ Example response for a failed call:
 }
 \endcode
 */
-static bool cbGetPreferenceValues(LSHandle* lsHandle, LSMessage* message, void* user_data)
+static bool cbGetPreferenceValues(LSHandle* lsHandle, LSMessage* message, void* /*user_data*/)
 {
 	// {"key": string}
 	LSMessageJsonParser parser(message, RELAXED_SCHEMA(PROPS_1(PROPERTY(key, string))

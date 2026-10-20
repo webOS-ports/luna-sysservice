@@ -23,6 +23,8 @@
 #include <luna-service2/lunaservice.h>
 #include <pbnjson.hpp>
 
+#include <type_traits>
+
 /*
  * Helper macros to build schemas in a more reliable, readable & editable way in C++
  */
@@ -120,11 +122,11 @@ public:
 	/*!
 	  * \brief Parse the message using the schema passed in constructor.
 	  * \param callerFunction   -Name of the function
-	  * \param sender           - If 'sender' is specified, automatically reply in case of bad syntax using standard format.
-	  * \param errOption        - Schema error option
+	  * \param lssender         - If 'lssender' is specified, automatically reply in case of bad syntax using standard format.
+	  * \param validationOption - Schema error option
 	  * \return true if parsed successfully, false otherwise
 	  */
-	bool                    parse(const char * callerFunction, LSHandle * sender = 0, ESchemaErrorOptions errOption = EIgnore);
+	bool                    parse(const char * callerFunction, LSHandle * lssender = nullptr, ESchemaErrorOptions validationOption = EIgnore);
 
 	/*! \fn getMsgCategoryMethod
 	  * \brief function parses the message and creates a string with category & method appended to it
@@ -186,11 +188,10 @@ pbnjson::JValue createJsonReply(bool returnValue = true, int errorCode = 0, cons
 template <typename T>
 T toInteger(const pbnjson::JValue &value)
 {
-	// these checks will be compiled-out due to static conditions;
 	// unsigned types must go through the wider parse or values above the
 	// signed maximum would be clamped before the conversion back to T
-	if (sizeof(T) < sizeof(int32_t) ||
-		(sizeof(T) == sizeof(int32_t) && static_cast<T>(-1) < static_cast<T>(0)))
+	if constexpr (sizeof(T) < sizeof(int32_t) ||
+	              (sizeof(T) == sizeof(int32_t) && std::is_signed<T>::value))
 	{
 		return static_cast<T>(value.asNumber<int32_t>());
 	}
@@ -203,8 +204,7 @@ T toInteger(const pbnjson::JValue &value)
 template <typename T>
 pbnjson::JValue toJValue(const T& value)
 {
-	// this check will be compiled-out due to static condition
-	if (sizeof(T) <= sizeof(int32_t))
+	if constexpr (sizeof(T) <= sizeof(int32_t))
 	{
 		return static_cast<int32_t>(value);
 	}

@@ -34,41 +34,36 @@ void setLogLevel(const std::string& loglstr)
 		PmLogSetContextLevel(sysServiceLogContext(), kPmLogLevel_Critical);
 	else if (loglstr == "warning")
 		 PmLogSetContextLevel(sysServiceLogContext(), kPmLogLevel_Warning);
-	else if (loglstr == "info")
-		PmLogSetContextLevel(sysServiceLogContext(), kPmLogLevel_Info);
 	else if (loglstr == "debug")
 		PmLogSetContextLevel(sysServiceLogContext(), kPmLogLevel_Debug);
-	else
+	else // "info", and the default for anything else
 		PmLogSetContextLevel(sysServiceLogContext(), kPmLogLevel_Info);
 }
 
-void logInfo(const char* file, int line, const char* func, const char *fmt, ...)
+// A printf-style wrapper: the format attribute on the declaration has the
+// compiler check every call's format string against its arguments.
+void logInfo(const char* file, int line, const char* func, const char *fmt, ...) // NOLINT(cert-dcl50-cpp)
 {
+	std::string meta = std::string(file) + "#" + std::to_string(line);
+
 	va_list args;
 	va_start(args, fmt);
-
-	//QString meta = QString("%1#%2").arg(QFileInfo(file).baseName()).arg(line);
-	std::string meta = std::string(file) + std::string("#") + std::to_string(line);
-
-	//QString data = QString().vasprintf(fmt, args);
 	va_list args_copy;
 	va_copy(args_copy, args);
-	int size = vsnprintf(nullptr, 0, fmt, args_copy);
-	// Allocate memory for the formatted string
-	std::string data;
-	if (size >= 0)
-	{
-		// Resize the string to accommodate the formatted data
-		data.resize(size + 1); // +1 for null terminator
-
-		// Format the string into the buffer
-		vsnprintf(&data[0], size + 1, fmt, args);
-		data.pop_back(); // Remove the extra null terminator added by vsnprintf
-	}
-
-	va_end(args);
+	int size = vsnprintf(nullptr, 0, fmt, args_copy); // Flawfinder: ignore - format checked at compile time
 	va_end(args_copy);
-	//PmLogInfo(sysServiceLogContext(), meta.toLatin1().data(), 1, PMLOGKS("FUNC", func), "%s", data.toUtf8().data());
+
+	std::string data;
+	if (size > 0)
+	{
+		data.resize(static_cast<size_t>(size) + 1); // room for vsnprintf's terminator
+		if (vsnprintf(&data[0], data.size(), fmt, args) == size) // Flawfinder: ignore - as above
+			data.resize(static_cast<size_t>(size));
+		else
+			data.clear();
+	}
+	va_end(args);
+
 	PmLogInfo(sysServiceLogContext(), meta.c_str(), 1, PMLOGKS("FUNC", func), "%s", data.c_str());
 }
 

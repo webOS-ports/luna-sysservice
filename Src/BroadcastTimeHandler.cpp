@@ -303,7 +303,7 @@ bool TimePrefsHandler::cbSetBroadcastTime(LSHandle* handle, LSMessage *message,
 bool TimePrefsHandler::cbGetBroadcastTime(LSHandle* handle, LSMessage *message,
 										  void *userData)
 {
-	BroadcastTime &broadcastTime = static_cast<TimePrefsHandler*>(userData)->m_broadcastTime;
+	const BroadcastTime &broadcastTime = static_cast<TimePrefsHandler*>(userData)->m_broadcastTime;
 
 	LSMessageJsonParser parser(message, schemaEmptyObject);
 	if (!parser.parse("cbGetBroadcastTime", handle, EValidateAndErrorAlways)) return true;
@@ -325,10 +325,10 @@ bool TimePrefsHandler::cbGetBroadcastTime(LSHandle* handle, LSMessage *message,
 }
 
 bool TimePrefsHandler::cbGetEffectiveBroadcastTime(LSHandle* handle, LSMessage *message,
-												   void *userData)
+												   void *userData) // cppcheck-suppress constParameterPointer ; LSMethodFunction takes void*
 {
-	TimePrefsHandler *timePrefsHandler = static_cast<TimePrefsHandler*>(userData);
-	BroadcastTime &broadcastTime = timePrefsHandler->m_broadcastTime;
+	const TimePrefsHandler *timePrefsHandler = static_cast<const TimePrefsHandler*>(userData);
+	const BroadcastTime &broadcastTime = timePrefsHandler->m_broadcastTime;
 
 	LSMessageJsonParser parser(message, schemaSubscribeRequest);
 	if (!parser.parse("cbGetEffectiveBroadcastTime", handle, EValidateAndErrorAlways)) return true;

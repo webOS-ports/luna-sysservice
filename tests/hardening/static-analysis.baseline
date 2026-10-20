@@ -1,0 +1,116 @@
+# Static-analysis findings triaged as false positives (or as what the
+# tool cannot see past). static-analysis.sh fails on any finding not
+# listed here, and on any entry listed without a reason.
+# One line per finding (repeated when reported more than once), without
+# line numbers: tool<TAB>severity<TAB>file<TAB>check<TAB>message
+# A "## <reason>" line documents the entries below it.
+# Regenerate with: tests/hardening/static-analysis.sh <build> --update-baseline
+# (reasons are kept for findings that are still reported).
+
+## Flagged inside libstdc++'s std::string move constructor, reached from std::operator+; no pointer of ours is NULL there.
+gcc -fanalyzer -O0	warning	Src/Settings.cpp	-Wanalyzer-null-argument	use of NULL where non-null expected [CWE-476]
+
+## Reported at the fopen() itself, the point where the analysis of that path stopped at its budget: the FILE is closed on every return (fclose() in createManualTimeZone, the FilePtr unique_ptr in parseTimeZone).
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-file-leak	leak of FILE 'fopen(usrDefinedTZFilePath, "wb")' [CWE-775]
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-file-leak	leak of FILE 'fopen(usrDefinedTZFilePath, "wb")' [CWE-775]
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-malloc-leak	leak of 'fopen(usrDefinedTZFilePath, "wb")' [CWE-401]
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-malloc-leak	leak of 'fopen(usrDefinedTZFilePath, "wb")' [CWE-401]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-file-leak	leak of FILE 'fopen(filePath.std::__cxx11::basic_string<char>::_M_dataplus.std::__cxx11::basic_string<char>::_Alloc_hider::_M_p, "r")' [CWE-775]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-file-leak	leak of FILE 'fopen(filePath.std::__cxx11::basic_string<char>::_M_dataplus.std::__cxx11::basic_string<char>::_Alloc_hider::_M_p, "r")' [CWE-775]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-malloc-leak	leak of 'fopen(filePath.std::__cxx11::basic_string<char>::_M_dataplus.std::__cxx11::basic_string<char>::_Alloc_hider::_M_p, "r")' [CWE-401]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-malloc-leak	leak of 'fopen(filePath.std::__cxx11::basic_string<char>::_M_dataplus.std::__cxx11::basic_string<char>::_Alloc_hider::_M_p, "r")' [CWE-401]
+
+## gcc -fanalyzer reads '<unknown>' bytes inside libstdc++ (std::string's small-string buffer, a std::string/std::vector/JValue return slot) that it does not model as initialised. No variable of ours is read uninitialised on these paths, and clang's analyzer reports nothing on them.
+gcc -fanalyzer -O0	warning	Inc/JSONUtils.h	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O0	warning	Src/JSONUtils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O0	warning	Src/JSONUtils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O0	warning	Src/JSONUtils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O0	warning	Src/PrefsDb.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O0	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/PrefsDb.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/Utils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O2	warning	Src/Utils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+
+## gcc -fanalyzer stopped at its budget: for some paths of the file (the record at line 0), or at the program point named. These are not defect reports; what was analysed is clean. A raised budget (see analyzer-budget) was tried for every file in Src/ (TimePrefsHandler.cpp at -O0 only) and did not help for these: the analyzer still stopped early, ran past the time or memory cap, or GCC 15.3 crashed at -O2. Of the test sources, test_json and test_prefsdb were tried and ran past 600 s; the rest were not tried.
+gcc -fanalyzer -O0	warning	Src/DeviceInfoService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/LocalePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/NTPClock.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/OsInfoService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/PrefsFactory.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/Utils.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	Src/WallpaperPrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_json.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_prefsdb.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_prefsfactory.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_settings.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_systemrestore.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_time.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_tzparser.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_urlrep.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_utils.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Inc/Singleton.h	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4851 -> SN: 60 in TimePrefsHandler::_ZN16TimePrefsHandler22nitzHandlerOffsetValueER14NitzParametersRiRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE.part.0), (SN: 1714 -> SN: 4838 in TimePrefsHandler::setTimeZone)] before (SN: 1712 stmt: 0):  _9 = object;EN: 56888-56889, EN: 56916-56917, EN: 56944-56945, EN: 58950-58951
+gcc -fanalyzer -O2	warning	Inc/Singleton.h	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4851 -> SN: 70 in TimePrefsHandler::_ZN16TimePrefsHandler22nitzHandlerOffsetValueER14NitzParametersRiRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE.part.0), (SN: 1714 -> SN: 4838 in TimePrefsHandler::setTimeZone)] before (SN: 1712 stmt: 0):  _9 = object;EN: 63308-63309, EN: 63336-63337, EN: 63364-63365, EN: 65415-65416
+gcc -fanalyzer -O2	warning	Src/BroadcastTimeHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/ClockHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/DeviceInfoService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/LocalePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/NTPClock.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/NetworkConnectionListener.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/OsInfoService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/PrefsFactory.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/PrefsFactory.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 854 stmt: 0):  LS::Error::~Error (&error);EN: 25253-25255, EN: 25399-25401, EN: 25546-25547
+gcc -fanalyzer -O2	warning	Src/RingtonePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/SystemRestore.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4798 -> SN: 20 in TimePrefsHandler::_ZN16TimePrefsHandler29applyAlternativeFactorySourceEv.part.0), (SN: 4699 -> SN: 4789 in TimePrefsHandler::systemSetTime), (SN: 4638 -> SN: 4666 in TimePrefsHandler::postSystemTimeChange)] before (SN: 4562 stmt: 0):  if (&D.221851 == _14)EN: 29648, EN: 29654, EN: 29661, EN: 29668, EN: 29675, EN: 29682, EN: 29689, EN: 29696
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4798 -> SN: 20 in TimePrefsHandler::_ZN16TimePrefsHandler29applyAlternativeFactorySourceEv.part.0), (SN: 4699 -> SN: 4789 in TimePrefsHandler::systemSetTime), (SN: 4638 -> SN: 4666 in TimePrefsHandler::postSystemTimeChange)] before (SN: 4614 stmt: 0):  if (&D.221851 == _15)EN: 32979-32981, EN: 32995, EN: 33002, EN: 33009, EN: 33016, EN: 33023
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4798 -> SN: 20 in TimePrefsHandler::_ZN16TimePrefsHandler29applyAlternativeFactorySourceEv.part.0), (SN: 4699 -> SN: 4789 in TimePrefsHandler::systemSetTime), (SN: 4638 -> SN: 4666 in TimePrefsHandler::postSystemTimeChange)] before (SN: 4618 stmt: 0):  if (&D.221851 == _17)EN: 33078-33085
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4851 -> SN: 70 in TimePrefsHandler::_ZN16TimePrefsHandler22nitzHandlerOffsetValueER14NitzParametersRiRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE.part.0)] before (SN: 4818 stmt: 0):  _5 = &pZoneInfo_18->name;EN: 62626-62628, EN: 64874, EN: 65535-65537, EN: 66111
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 4851 -> SN: 70 in TimePrefsHandler::_ZN16TimePrefsHandler22nitzHandlerOffsetValueER14NitzParametersRiRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE.part.0)] before (SN: 4837 stmt: 0):  this_60(D)->m_cpCurrentTimeZone = pZoneInfo_19;EN: 63287-63289, EN: 65394-65396, EN: 66046-66047
+gcc -fanalyzer -O2	warning	Src/TimePrefsHandler.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 69 stmt: 0):  TimePrefsHandler::setTimeZone (this_6(D), selectedZone_19);EN: 62584-62591
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 438 -> SN: 351 in TimeZoneService::createManualTimeZone)] after SN: 425EN: 4754, EN: 4761, EN: 5882-5885, EN: 5892, EN: 5899
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 438 -> SN: 351 in TimeZoneService::createManualTimeZone)] before (SN: 429 stmt: 0):  if (weekStart_33 != 5)EN: 4768, EN: 4778, EN: 5918-5921, EN: 5955, EN: 5966
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 438 -> SN: 353 in TimeZoneService::createManualTimeZone)] before (SN: 425 stmt: 0):  _12 = tzBrokenTimeLast.tm_mday;EN: 4918-4924, EN: 4937
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 438 -> SN: 353 in TimeZoneService::createManualTimeZone)] before (SN: 429 stmt: 0):  if (weekStart_33 != 5)EN: 4985-4991, EN: 5049
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 682 -> SN: 618 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 403 -> SN: 659 in TimeZoneService::createTimeZoneFromEasData), (SN: 342 -> SN: 367 in TimeZoneService::createManualTimeZone)] before (SN: 333 stmt: 0):  _1 = entry_25(D)->dayOfWeek;EN: 13853-13854, EN: 13974, EN: 14062, EN: 14116, EN: 14149, EN: 14188, EN: 14225
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 682 -> SN: 618 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 403 -> SN: 659 in TimeZoneService::createTimeZoneFromEasData), (SN: 342 -> SN: 367 in TimeZoneService::createManualTimeZone)] before (SN: 337 stmt: 0):  _7 = entry_25(D)->month;EN: 13879-13882, EN: 13988-13990, EN: 14076
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 682 -> SN: 618 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 403 -> SN: 659 in TimeZoneService::createTimeZoneFromEasData), (SN: 438 -> SN: 351 in TimeZoneService::createManualTimeZone)] before (SN: 425 stmt: 0):  _12 = tzBrokenTimeLast.tm_mday;EN: 12316-12317, EN: 12325, EN: 12332, EN: 12510-12511, EN: 12519, EN: 12525
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 682 -> SN: 618 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 403 -> SN: 659 in TimeZoneService::createTimeZoneFromEasData), (SN: 438 -> SN: 353 in TimeZoneService::createManualTimeZone)] before (SN: 425 stmt: 0):  _12 = tzBrokenTimeLast.tm_mday;EN: 12690-12691, EN: 12699, EN: 12706, EN: 12899-12901, EN: 12910
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 682 -> SN: 618 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 403 -> SN: 659 in TimeZoneService::createTimeZoneFromEasData), (SN: 438 -> SN: 353 in TimeZoneService::createManualTimeZone)] before (SN: 429 stmt: 0):  if (weekStart_33 != 5)EN: 12722-12723, EN: 12741, EN: 12752, EN: 12934-12936, EN: 12962
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 682 -> SN: 618 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 403 -> SN: 659 in TimeZoneService::createTimeZoneFromEasData)] after SN: 398EN: 14964-14971
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 682 -> SN: 618 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 403 -> SN: 659 in TimeZoneService::createTimeZoneFromEasData)] before (SN: 369 stmt: 0):  if (i_29 != 25)EN: 12263-12264, EN: 14300, EN: 14336, EN: 14353, EN: 14370, EN: 14387, EN: 14406
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 682 -> SN: 618 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 403 -> SN: 659 in TimeZoneService::createTimeZoneFromEasData)] before (SN: 370 stmt: 0):  _10 = a_userTz_50(D)->easBias;EN: 14424-14431
+gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [(SN: 682 -> SN: 618 in TimeZoneService::cbCreateTimeZoneFromEasData), (SN: 979 -> SN: 650 in TimeZoneService::createTimeZoneFromEasData), (SN: 876 -> SN: 969 in TimeZoneService::getTimeZoneBaseOffset)] before (SN: 847 stmt: 0):  if (&MEM[(struct _List_node_header *)&transitionList].D.85373 != iter$_M_node_63)EN: 9209, EN: 9234, EN: 9258, EN: 9280, EN: 9640, EN: 9664, EN: 9686, EN: 10026
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	analysis bailed out early (2621 'after-snode' enodes; 7815 enodes)
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 361 stmt: 0):  if (i_326 != 4)EN: 3570-3572, EN: 3580, EN: 3586, EN: 3592, EN: 7339, EN: 7345
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 407 stmt: 0):  if (i_346 != 4)EN: 5245-5252
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 423 stmt: 0):  if (i_372 != 4)EN: 5429-5436
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 432 stmt: 0):  if (i_112 < _299)EN: 5501-5508
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 437 stmt: 0):  if (i_113 < _335)EN: 7015-7021, EN: 7034
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 440 stmt: 0):  if (i_114 < _275)EN: 7085-7091, EN: 7104
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 443 stmt: 0):  if (i_115 < _287)EN: 7154-7160, EN: 7173
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 451 stmt: 0):  if (stored_107 <= 8)EN: 3511-3513, EN: 7322, EN: 7668, EN: 7686, EN: 7704, EN: 7722
+gcc -fanalyzer -O2	warning	Src/UrlRep.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	tests/unit/test_prefsfactory.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	tests/unit/test_settings.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	tests/unit/test_tzparser.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	tests/unit/test_utils.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+
+## ttEntryList[i] with i below timeCnt after timeCnt push_back()s: the analyzer does not track a std::vector's size and assumes an empty one.
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-null-dereference	dereference of NULL '0' [CWE-476]
+gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-null-dereference	dereference of NULL '0' [CWE-476]

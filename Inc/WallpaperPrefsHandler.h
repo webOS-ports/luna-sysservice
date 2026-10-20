@@ -39,8 +39,8 @@ public:
 	bool isPrefConsistent() override;
 	void restoreToDefault() override;
 
-	bool importWallpaperViaImage2(const std::string& imageSourceUrl, double centerX,
-								  double centerY, double scaleFactor,
+	bool importWallpaperViaImage2(const std::string& imageFilepath, double focusX,
+								  double focusY, double scaleFactor,
 								  std::string& ret_wallpaperName, std::string& errorText);
 
 	bool importWallpaper(std::string& ret_wallpaperName,const std::string& sourcePathAndFile,
@@ -60,9 +60,9 @@ public:
 						double scale,
 						std::string& errorText);
 
-	bool deleteWallpaper(std::string wallpaperName);
+	bool deleteWallpaper(const std::string& wallpaperName);
 
-	bool convertImage(const std::string& pathToSourceFile,
+	static bool convertImage(const std::string& pathToSourceFile,
 					  const std::string& pathToDestFile, const char* format,
 					  bool justConvert,
 					  double centerX, double centerY, double scale,
@@ -78,10 +78,9 @@ public:
 	bool getWallpaperSpecFromFilename(std::string& wallpaperName,std::string& wallpaperFile,std::string& wallpaperThumbFile);
 
 private:
-	QImage clipImageToScreenSizeWithFocus(QImage& image, int focus_x,int focus_y);
-	QImage clipImageToScreenSize(QImage& image, bool center);
-	int resizeImage(const std::string& sourceFile, const std::string& destFile, int destImgW, int destImgH, const char* format);
-	void getScreenDimensions();
+	static QImage clipImageToScreenSizeWithFocus(const QImage& image, int focus_x,int focus_y);
+	static int resizeImage(const std::string& sourceFile, const std::string& destFile, int destImgW, int destImgH, const char* format);
+	static void getScreenDimensions();
 
 	std::list<std::string> m_wallpapers;
 	std::list<std::string> m_thumbnails;

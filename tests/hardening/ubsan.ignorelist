@@ -1,0 +1,5 @@
+# clang -fsanitize-ignorelist for run-sanitizers.sh (asan-clang).
+#
+# Exempts code from clang's checks, one "[check]" section and "fun:"/"src:"
+# line per exemption, each with the reason it is not a defect. There are no
+# exemptions: every implicit conversion check is on for all of our code.

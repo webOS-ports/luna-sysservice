@@ -52,7 +52,7 @@ public:
 		                           static_cast<gssize>(content.size()), nullptr);
 	}
 
-	static std::string read(const std::string& path)
+	static std::string contents(const std::string& path)
 	{
 		gchar *data = nullptr;
 		gsize len = 0;
@@ -64,7 +64,9 @@ public:
 	}
 
 private:
-	static void removeTree(const std::string& path)
+	// Recursion depth is the depth of the test's own scratch tree; symlinks
+	// are unlinked, not followed.
+	static void removeTree(const std::string& path) // NOLINT(misc-no-recursion)
 	{
 		GDir *dir = g_dir_open(path.c_str(), 0, nullptr);
 		if (dir) {

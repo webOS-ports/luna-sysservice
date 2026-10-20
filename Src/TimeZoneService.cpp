@@ -19,6 +19,8 @@
 #include <string>
 #include <cstring>
 #include <climits>
+#include <algorithm>
+#include <iterator>
 #include <glib.h>
 
 #include <pbnjson.hpp>
@@ -38,7 +40,7 @@ static LSMethod s_methods[]  = {
 	{ "getTimeZoneRules",  TimeZoneService::cbGetTimeZoneRules, LUNA_METHOD_FLAG_DEPRECATED},
 	{ "getTimeZoneFromEasData", TimeZoneService::cbGetTimeZoneFromEasData, LUNA_METHOD_FLAG_DEPRECATED},
 	{ "createTimeZoneFromEasData", TimeZoneService::cbCreateTimeZoneFromEasData, LUNA_METHOD_FLAG_DEPRECATED},
-	{ 0, 0 },
+	{ nullptr, nullptr, LUNA_METHOD_FLAGS_NONE },
 };
 
 #define ManualTimeZoneStart  2013
@@ -239,9 +241,9 @@ bool TimeZoneService::cbGetTimeZoneRules(LSHandle* lsHandle, LSMessage *message,
 
             if (tzEntry.years.empty()) {
                 time_t utcTime = time(NULL);
-                struct tm *localTime = localtime(&utcTime);
-                if (localTime)
-                    tzEntry.years.push_back(localTime->tm_year + 1900);
+                struct tm localTime;
+                if (localtime_r(&utcTime, &localTime))
+                    tzEntry.years.push_back(localTime.tm_year + 1900);
             }
 
             entries.push_back(tzEntry);
@@ -272,7 +274,7 @@ time_t TimeZoneService::getTimeZoneBaseOffset(const std::string &tzName)
 		return (time_t)-1;
 	}
 
-	TimeZoneResult r = totalResult.front();
+	const TimeZoneResult& r = totalResult.front();
 	// return as seconds
 	return r.utcOffset;
 }
@@ -407,7 +409,7 @@ TimeZoneService::TimeZoneResultList TimeZoneService::getTimeZoneRuleOne(const Ti
 	return results;
 }
 
-time_t TimeZoneService::nextTzTransition(const std::string& zoneId) const
+time_t TimeZoneService::nextTzTransition(const std::string& zoneId)
 {
 	time_t current = time(0);
 	time_t next_trans = -1;
@@ -527,15 +529,13 @@ Example response for a failed call:
 */
 // http://msdn.microsoft.com/en-us/library/ms725481.aspx
 bool TimeZoneService::cbGetTimeZoneFromEasData(LSHandle* lsHandle, LSMessage *message,
-											   void *user_data)
+											   void * /*user_data*/)
 {
 	JValue reply;
 
 	int easBias = 0;
 	EasSystemTime easStandardDate;
-	int easStandardBias = 0;
 	EasSystemTime easDaylightDate;
-	int easDaylightBias = 0;
 
 	easStandardDate.valid = false;
 	easDaylightDate.valid = false;
@@ -559,20 +559,11 @@ bool TimeZoneService::cbGetTimeZoneFromEasData(LSHandle* lsHandle, LSMessage *me
 	// standard date
 	readEasDate(root["standardDate"], easStandardDate);
 
-	// standard bias
-	JValue element = root["standardBias"];
-	if (element.isValid()) {
-		easStandardBias = element.asNumber<int>();
-	}
+	// standardBias and daylightBias are accepted but not needed to pick the
+	// zone
 
 	// daylight date
 	readEasDate(root["daylightDate"], easDaylightDate);
-
-	// daylight bias
-	element = root["daylightBias"];
-	if (element.isValid()) {
-		easDaylightBias = element.asNumber<int>();
-	}
 
 	// Both standard and daylight bias need to specified together,
 	// otherwise both are invalid
@@ -610,8 +601,10 @@ bool TimeZoneService::cbGetTimeZoneFromEasData(LSHandle* lsHandle, LSMessage *me
 		else {
 			// the loop below changes the process TZ to probe each candidate
 			// zone; remember the real one so it can be put back
-			const char* cpSavedTz = getenv("TZ");
-			std::string savedTz = cpSavedTz ? cpSavedTz : "";
+			// Flawfinder: ignore - only put back as it was
+			const char* cpSavedTz = getenv("TZ"); // NOLINT(concurrency-mt-unsafe) single-threaded daemon
+			const bool hadTz = (cpSavedTz != nullptr);
+			const std::string savedTz = hadTz ? cpSavedTz : "";
 
 			bool foundZone = false;
 
@@ -639,7 +632,7 @@ bool TimeZoneService::cbGetTimeZoneFromEasData(LSHandle* lsHandle, LSMessage *me
 
 				// Set this timezone as the current timezone, so that we can calculate when the
 				// DST transitions occurs in seconds for the specified eas data
-				setenv("TZ", tzEntry.tz.c_str(), 1);
+				setenv("TZ", tzEntry.tz.c_str(), 1); // NOLINT(concurrency-mt-unsafe) single-threaded daemon
 
 				struct tm tzBrokenTime;
 				tzBrokenTime.tm_sec = easStandardDate.second;
@@ -680,10 +673,10 @@ bool TimeZoneService::cbGetTimeZoneFromEasData(LSHandle* lsHandle, LSMessage *me
 			}
 
 			// put the process timezone back the way we found it
-			if (!savedTz.empty())
-				setenv("TZ", savedTz.c_str(), 1);
+			if (hadTz)
+				setenv("TZ", savedTz.c_str(), 1); // NOLINT(concurrency-mt-unsafe) single-threaded daemon
 			else
-				unsetenv("TZ");
+				unsetenv("TZ"); // NOLINT(concurrency-mt-unsafe) single-threaded daemon
 			tzset();
 
 			if (!foundZone)
@@ -700,16 +693,11 @@ Done:
 	return true;
 }
 
-bool TimeZoneService::createTimeZoneFromEasData(LSHandle* lsHandle, UserTzData* ap_userTz)
+bool TimeZoneService::createTimeZoneFromEasData(const UserTzData* ap_userTz)
 {
-	bool ret=true;
-	LSError lsError;
-
 	UserTzData a_userTz;
 	if (ap_userTz)
 		a_userTz = *ap_userTz;
-
-	LSErrorInit(&lsError);
 
 	auto handler = PrefsFactory::instance()->getPrefsHandler("timeZone");
 	if (!handler)
@@ -718,9 +706,10 @@ bool TimeZoneService::createTimeZoneFromEasData(LSHandle* lsHandle, UserTzData* 
 
 	if (false == a_userTz.easBiasValid)
 	{
-		a_userTz.easBias = getTimeZoneBaseOffset(tzHandler->currentTimeZoneName());
-		if (a_userTz.easBias == (time_t)-1)
+		time_t baseOffset = getTimeZoneBaseOffset(tzHandler->currentTimeZoneName());
+		if (baseOffset == (time_t)-1)
 			return false;
+		a_userTz.easBias = static_cast<int>(baseOffset);	// seconds east of UTC, well within int
 	}
 	a_userTz.easBias /= 60;
 
@@ -854,7 +843,7 @@ bool TimeZoneService::cbCreateTimeZoneFromEasData(LSHandle* lsHandle, LSMessage 
 		}
 	}
 
-	ret=thiz_class->createTimeZoneFromEasData(lsHandle, &userTz);
+	ret=thiz_class->createTimeZoneFromEasData(&userTz);
 	if (true == ret)
 	{
 		reply = createJsonReply(true);
@@ -1063,7 +1052,7 @@ void TimeZoneService::updateEasDateDayOfMonth(TimeZoneService::EasSystemTime& ti
 	time_t timeLastOfMonth = ::timegm(&tzBrokenTimeLast);
 	// Subtract out 2 hours from 1:00 on first of next month.
 	// This will give us 11:00 PM on last of this month
-	timeLastOfMonth -= 2 * 60 * 60;
+	timeLastOfMonth -= static_cast<time_t>(2 * 60 * 60);
 
 	// Now breakdown the time again
 	gmtime_r(&timeFirstOfMonth, &tzBrokenTimeFirst);
@@ -1079,8 +1068,8 @@ void TimeZoneService::updateEasDateDayOfMonth(TimeZoneService::EasSystemTime& ti
 	// 	   tzBrokenTimeLast.tm_mday, tzBrokenTimeLast.tm_hour,
 	// 	   tzBrokenTimeLast.tm_wday);
 
-	char days[31+7]; // max(mday)=31, max(wday)=7
-	::memset(days, -1, sizeof(days));
+	int days[31+7]; // max(mday)=31, max(wday)=7
+	std::fill(std::begin(days), std::end(days), -1);
 	for (int i = tzBrokenTimeFirst.tm_mday; i <= tzBrokenTimeLast.tm_mday; i++) {
 		days[i + tzBrokenTimeFirst.tm_wday - 1] = i;
 	}
@@ -1090,7 +1079,7 @@ void TimeZoneService::updateEasDateDayOfMonth(TimeZoneService::EasSystemTime& ti
 
 	int weekStart = 0;
 	for (weekStart = 0; weekStart < 5; weekStart++) {
-		if (days[weekStart * 7 + dayOfWeek] != (char)(-1))
+		if (days[weekStart * 7 + dayOfWeek] != -1)
 			break;
 	}
 
@@ -1101,23 +1090,19 @@ void TimeZoneService::updateEasDateDayOfMonth(TimeZoneService::EasSystemTime& ti
     if (daysIndex >= 0)
         time.day = days[daysIndex];
 
-    if (time.day == (char) (-1)) {
-        if (week == 0) {
-            auto daysIndex = (week + 1) * 7 + dayOfWeek;
-            if (daysIndex >= 0)
-                time.day = days[daysIndex];
-        } else {
-            auto daysIndex = (week - 1) * 7 + dayOfWeek;
-            if (daysIndex >= 0)
-                time.day = days[daysIndex];
-        }
+    if (time.day == -1) {
+        // no such weekday in that week: take the one a week later (first
+        // week) or earlier
+        daysIndex = (week == 0 ? week + 1 : week - 1) * 7 + dayOfWeek;
+        if (daysIndex >= 0)
+            time.day = days[daysIndex];
     }
 
 	PmLogDebug(sysServiceLogContext(),"Updated DST start week:%d day:%d  of the year:%d", week,time.day,year);
 }
 
-int TimeZoneService::compareEasRules(TimeZoneService::EasSystemTime& startTime,
-					TimeZoneService::EasSystemTime& endTime,
+int TimeZoneService::compareEasRules(const TimeZoneService::EasSystemTime& startTime,
+					const TimeZoneService::EasSystemTime& endTime,
 					int diffBias)
 {
 	if(!startTime.valid || !endTime.valid)
@@ -1151,9 +1136,9 @@ int TimeZoneService::compareEasRules(TimeZoneService::EasSystemTime& startTime,
 	tzDSTEndTime.tm_yday = 0;
 	tzDSTEndTime.tm_isdst = 0;
 
-	int duration = ::timegm(&tzDSTEndTime) - ::timegm(&tzDSTStartTime);
+	const time_t duration = ::timegm(&tzDSTEndTime) - ::timegm(&tzDSTStartTime);
 
-	PmLogDebug(sysServiceLogContext(),"Comapre DST duration : %d:%d", diffBias,duration);
+	PmLogDebug(sysServiceLogContext(),"Comapre DST duration : %d:%lld", diffBias, static_cast<long long>(duration));
 
 	// works as like no DST
 	if(duration == 0)
@@ -1164,7 +1149,7 @@ int TimeZoneService::compareEasRules(TimeZoneService::EasSystemTime& startTime,
 		return 1;
 
 	// error case
-	if((diffBias*60) > duration)
+	if(static_cast<time_t>(diffBias) * 60 > duration)
 		return -1;
 
 	return 1;
@@ -1177,6 +1162,7 @@ bool TimeZoneService::createManualTimeZone(UserTzData& a_userTz)
 	// Set to None
 	std::string tzRule = "-";
 
+	// Flawfinder: ignore - fixed path under the root-owned preferences dir
 	fpZone = fopen(usrDefinedTZFilePath, "wb");
 	if (fpZone == NULL)
 	{
@@ -1206,7 +1192,7 @@ bool TimeZoneService::createManualTimeZone(UserTzData& a_userTz)
 				}
 				else if(ret < 0)
 				{
-					fclose(fpZone);
+					(void) fclose(fpZone);	// discarded: nothing usable was written
 					return false;
 				}
 
@@ -1228,17 +1214,27 @@ bool TimeZoneService::createManualTimeZone(UserTzData& a_userTz)
 	// create Zone entry
 	writeTimeZoneInfo(fpZone, MANUAL_TZ_NAME, tzRule.c_str(), "USR", a_userTz.easBias);
 
-	fclose(fpZone);
+	// a short write (full disk) must not reach zic as a valid zone file
+	bool written = !ferror(fpZone);
+	if (fclose(fpZone) != 0)
+		written = false;
 	fpZone = NULL;
+	if (!written)
+	{
+		PmLogWarning(sysServiceLogContext(), "ZONE_WRITE_FAILED", 0,
+					 "failed to write the manual timezone source %s", usrDefinedTZFilePath);
+		return false;
+	}
 
 	if(g_mkdir_with_parents(usrDefinedTZPath, 0755) != 0)
 	{
 		return false;
 	}
 
-	gchar* exec_args[] = {(gchar*) execZIC, (gchar*) "-d",
-						  (gchar*) usrDefinedTZPath,
-						  (gchar*) usrDefinedTZFilePath, NULL};
+	// g_spawn takes gchar** but does not modify the strings
+	gchar* exec_args[] = {const_cast<gchar*>(execZIC), const_cast<gchar*>("-d"),
+						  const_cast<gchar*>(usrDefinedTZPath),
+						  const_cast<gchar*>(usrDefinedTZFilePath), NULL};
 	gint zicStatus = 0;
 	GError* zicError = NULL;
 	gboolean spawned = g_spawn_sync(NULL, exec_args, NULL,
@@ -1280,17 +1276,19 @@ void TimeZoneService::writeTimeZoneRule(FILE* fp, const char* ruleName,
 
     if (entry.dayOfWeek >= 0 && entry.dayOfWeek <= 6) {
         if (entry.week == 5) {
-            snprintf(onDay, sizeof(onDay), "last%s", wday_names[entry.dayOfWeek]);
+            // at most "lastSat" or "Sat>=31" (day is a day of the month): fits
+            (void) snprintf(onDay, sizeof(onDay), "last%s", wday_names[entry.dayOfWeek]);
         } else {
-            snprintf(onDay, sizeof(onDay), "%s%s%d", wday_names[entry.dayOfWeek], ">=",
+            (void) snprintf(onDay, sizeof(onDay), "%s%s%d", wday_names[entry.dayOfWeek], ">=",
                     entry.day);
         }
     }
 
-    if (entry.month >= 0) {
+    if (entry.month >= 1 && entry.month <= 12) {
         //# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER
         //Rule    US      2007    max     -       Nov     Sun>=1  2:00    0       S
-        fprintf(fp, "%s\t%s\t%d\t%s\t-\t%s\t%s\t%d:%02d\t%s\t%s\n", "Rule",
+        // errors are picked up with ferror() before the file is closed
+        (void) fprintf(fp, "%s\t%s\t%d\t%s\t-\t%s\t%s\t%d:%02d\t%s\t%s\n", "Rule",
                 ruleName, entry.year, duration, mon_names[entry.month], onDay,
                 entry.hour, entry.minute, dstBias, isDST ? "D" : "S");
     }
@@ -1305,7 +1303,8 @@ void TimeZoneService::writeTimeZoneInfo(FILE* fp, const char* zoneName,
 	char time_bias[TimeZoneService::kOffsetTimeBufSize];
 	setOffsetToTime(bias, time_bias);
 
-	fprintf(fp, "%s\t%s\t%s\t%s\t%s\n",
+	// errors are picked up with ferror() before the file is closed
+	(void) fprintf(fp, "%s\t%s\t%s\t%s\t%s\n",
 		"Zone", zoneName,
 		time_bias, ruleName, format);
 
@@ -1313,9 +1312,9 @@ void TimeZoneService::writeTimeZoneInfo(FILE* fp, const char* zoneName,
 
 int TimeZoneService::getCurrentYear() {
     time_t utcTime = time(NULL);
-    struct tm *localTime = localtime(&utcTime);
-    if (localTime)
-        return (localTime->tm_year + 1900);
+    struct tm localTime;
+    if (localtime_r(&utcTime, &localTime))
+        return (localTime.tm_year + 1900);
     else
         return 1900; //error occured while fetching localtime
 }
@@ -1327,6 +1326,6 @@ void TimeZoneService::setOffsetToTime(int offset, char *result)
 
 	if(minute <0) minute *= -1;
 
-	snprintf(result, kOffsetTimeBufSize, "%d:%02d", hour, minute);
+	(void) snprintf(result, kOffsetTimeBufSize, "%d:%02d", hour, minute); // sized for any int: cannot truncate
 }
 

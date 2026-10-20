@@ -43,9 +43,9 @@ static bool cbDeleteRingtone(LSHandle* lsHandle, LSMessage *message,
  */
 
 static LSMethod s_methods[]  = {
-	{ "addRingtone",     cbAddRingtone},
-	{ "deleteRingtone",	 cbDeleteRingtone},
-	{ 0, 0 },
+	{ "addRingtone",     cbAddRingtone, LUNA_METHOD_FLAGS_NONE },
+	{ "deleteRingtone",	 cbDeleteRingtone, LUNA_METHOD_FLAGS_NONE },
+	{ nullptr, nullptr, LUNA_METHOD_FLAGS_NONE },
 };
 
 RingtonePrefsHandler::RingtonePrefsHandler(LSHandle* serviceHandle) : PrefsHandler(serviceHandle)
@@ -91,17 +91,17 @@ std::list<std::string> RingtonePrefsHandler::keys() const
 	return k;
 }
 
-bool RingtonePrefsHandler::validate(const std::string& key, const pbnjson::JValue &)
+bool RingtonePrefsHandler::validate(const std::string&, const pbnjson::JValue &)
 {
 	return true;		//TODO: should possibly see if the pref points to a valid file
 }
 
-void RingtonePrefsHandler::valueChanged(const std::string& key, const pbnjson::JValue &)
+void RingtonePrefsHandler::valueChanged(const std::string&, const pbnjson::JValue &)
 {
 	//TODO: should possibly see if the pref points to a valid file
 }
 
-JValue RingtonePrefsHandler::valuesForKey(const std::string& key)
+JValue RingtonePrefsHandler::valuesForKey(const std::string&)
 {
 	//TODO: could scan ringtone folders and return possible files. However, since selection is handled by file picker which
 	// may be scanning in unspecified locations, this wouldn't exactly be accurate
@@ -179,21 +179,18 @@ static bool cbAddRingtone(LSHandle* lsHandle, LSMessage *message, void *)
 
 	bool success = false;
 
-	int rc = 0;
-
 	std::string errorText;
 	std::string targetFileAndPath;
 	std::string pathPart ="";
 	std::string filePart ="";
 	int errorCode =0;
-	UrlRep urlRep;
 
 	do {
 		JValue root = parser.get();
 		std::string srcFileName = root["filePath"].asString();
 
 		//parse the string as a URL
-		urlRep = UrlRep::fromUrl(srcFileName.c_str());
+		UrlRep urlRep = UrlRep::fromUrl(srcFileName.c_str());
 
 		if (urlRep.valid == false) {
 			errorText = std::string("invalid specification for source file (please use url format)");
@@ -230,7 +227,7 @@ static bool cbAddRingtone(LSHandle* lsHandle, LSMessage *message, void *)
 		}
 
 		targetFileAndPath = std::string(PrefsDb::s_mediaPartitionPath)+std::string(PrefsDb::s_mediaPartitionRingtonesDir)+std::string("/")+filePart;
-		rc = Utils::fileCopy(srcFileName.c_str(),targetFileAndPath.c_str());
+		int rc = Utils::fileCopy(srcFileName.c_str(),targetFileAndPath.c_str());
 
 		if (rc == -1) {
 			errorText = std::string("Unable to add ringtone.");
@@ -304,7 +301,7 @@ Example response for a failed call:
 }
 \endcode
 */
-static bool cbDeleteRingtone(LSHandle* lsHandle, LSMessage *message, void *user_data)
+static bool cbDeleteRingtone(LSHandle* lsHandle, LSMessage *message, void * /*user_data*/)
 {
 	// {"filePath": string}
 	LSMessageJsonParser parser(message, STRICT_SCHEMA(PROPS_1(PROPERTY(filePath, string))
@@ -314,8 +311,7 @@ static bool cbDeleteRingtone(LSHandle* lsHandle, LSMessage *message, void *user_
 		return true;
 
 	bool success = true;
-	int rc = 0;
-        int errorCode = 0;
+	int errorCode = 0;
 	std::string errorText;
 	std::string pathPart ="";
 	std::string filePart ="";
@@ -354,8 +350,7 @@ static bool cbDeleteRingtone(LSHandle* lsHandle, LSMessage *message, void *user_
 
 		//UI is currently making sure that the current ringtone is not getting deleted. May be, we can check again here to make sure the current ringtone is not removed.
 
-		rc = unlink(srcFileName.c_str());
-		if(rc == -1) {
+		if (unlink(srcFileName.c_str()) == -1) {
 			errorText = std::string("Unable to delete ringtone.");
                         errorCode = 102;
 			success = false;

@@ -14,34 +14,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-/*
- * Base64 encoding copyright follows:
- *
- * Copyright (C) 2004-2008 René Nyffenegger
-
-   This source code is provided 'as-is', without any express or implied
-   warranty. In no event will the author be held liable for any damages
-   arising from the use of this software.
-
-   Permission is granted to anyone to use this software for any purpose,
-   including commercial applications, and to alter it and redistribute it
-   freely, subject to the following restrictions:
-
-   1. The origin of this source code must not be misrepresented; you must not
-	  claim that you wrote the original source code. If you use this source code
-	  in a product, an acknowledgment in the product documentation would be
-	  appreciated but is not required.
-
-   2. Altered source versions must be plainly marked as such, and must not be
-	  misrepresented as being the original source code.
-
-   3. This notice may not be removed or altered from any source distribution.
-
-   René Nyffenegger rene.nyffenegger@adp-gmbh.ch
- *
- */
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -49,6 +21,8 @@
 #include <sys/statfs.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <vector>
 #include "UrlRep.h"
 #include "Utils.h"
 #include <cstdlib>
@@ -60,54 +34,6 @@ namespace Utils
 
 using namespace pbnjson;
 
-void _dbgprintf(const char * format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	std::string appendFormat = std::string("LunaSysService:: ")+std::string(format)+std::string("\n");
-	vprintf(appendFormat.c_str(), args);
-	fflush(stdout);fflush(stderr);
-	va_end(args);
-}
-
-char* readFile(const char* filePath)
-{
-	if (!filePath)
-		return 0;
-
-	FILE* f = fopen(filePath,"r");
-
-	if (!f)
-	return 0;
-
-	fseek(f, 0L, SEEK_END);
-	long sz = ftell(f);
-	fseek( f, 0L, SEEK_SET );
-	if (sz <= 0) {
-		fclose(f);
-		return 0;
-	}
-
-	char* ptr = new char[sz+1];
-	if( !ptr )
-	{
-		fclose(f);
-		return 0;
-	}
-	ptr[sz] = 0;
-
-	size_t result = fread(ptr, sz, 1, f);
-	if(result != 1)
-	{
-		delete[] ptr;
-		fclose(f);
-		return 0;
-	}
-	fclose(f);
-
-	return ptr;
-}
-
 std::string trimWhitespace(const std::string& s,const std::string& drop)
 {
  std::string::size_type first = s.find_first_not_of( drop );
@@ -115,34 +41,6 @@ std::string trimWhitespace(const std::string& s,const std::string& drop)
 
  if( first == std::string::npos || last == std::string::npos ) return std::string( "" );
    return s.substr( first, last - first + 1 );
-}
-
-bool getNthSubstring(unsigned int n,std::string& dest,const std::string& str,const std::string& delims) {
-	if (n == 0)
-		n=1;
-
-	std::string::size_type start = std::string::npos;
-	std::string::size_type mark = 0;
-	unsigned int i=1;
-	while (1) {
-		//find the start of a non-delim
-		start = str.find_first_not_of(delims,mark);
-		if (start == std::string::npos)
-			break;
-		//find the end of the current substring (where the next instance of delim lives, or end of the string)
-		mark = str.find_first_of(delims,start);
-		if ((mark == std::string::npos) || (i == n))
-			break;	//last substring, or Nth one found
-		++i;
-	}
-
-	if (i != n || start == std::string::npos)
-		return false;
-
-	//extract
-	dest = str.substr(start, (mark == std::string::npos) ? std::string::npos : mark-start);
-	return true;
-
 }
 
 int splitFileAndPath(const std::string& srcPathAndFile,std::string& pathPart,std::string& filePart) {
@@ -179,29 +77,11 @@ int splitFileAndPath(const std::string& srcPathAndFile,std::string& pathPart,std
 	return s;
 }
 
-int splitFileAndExtension(const std::string& srcFileAndExt,std::string& filePart,std::string& extensionPart) {
-
-	std::vector<std::string> parts;
-		int s = splitStringOnKey(parts,srcFileAndExt,std::string("."));
-		if (s == 1) {
-			//only file part; no extension
-			filePart = parts.at(0);
-		}
-		else if (s >= 2) {
-			filePart += parts.at(0);
-			for (int i=1;i<s-1;i++)
-				filePart += std::string(".")+parts.at(i);
-			extensionPart = parts.at(s-1);
-		}
-		return s;
-}
-
 int splitStringOnKey(std::vector<std::string>& returnSplitSubstrings,const std::string& baseStr,const std::string& delims) {
 
 	const std::string base = trimWhitespace(baseStr);
 	std::string::size_type start = 0;
 	std::string::size_type mark = 0;
-	std::string extracted;
 
 	int i=0;
 	while (start < base.size()) {
@@ -214,7 +94,7 @@ int splitStringOnKey(std::vector<std::string>& returnSplitSubstrings,const std::
 		if (mark == std::string::npos)
 			mark = base.size();
 
-		extracted = base.substr(start,mark-start);
+		const std::string extracted = base.substr(start,mark-start);
 		if (extracted.size() > 0) {
 			//valid string...add it
 			returnSplitSubstrings.push_back(extracted);
@@ -242,7 +122,6 @@ int splitStringOnKey(std::list<std::string>& returnSplitSubstrings,const std::st
 	const std::string base = trimWhitespace(baseStr);
 	std::string::size_type start = 0;
 	std::string::size_type mark = 0;
-	std::string extracted;
 
 	int i=0;
 	while (start < base.size()) {
@@ -255,7 +134,7 @@ int splitStringOnKey(std::list<std::string>& returnSplitSubstrings,const std::st
 		if (mark == std::string::npos)
 			mark = base.size();
 
-		extracted = base.substr(start,mark-start);
+		const std::string extracted = base.substr(start,mark-start);
 		if (extracted.size() > 0) {
 			//valid string...add it
 			returnSplitSubstrings.push_back(extracted);
@@ -285,36 +164,45 @@ int fileCopy(const char * srcFileAndPath,const char * dstFileAndPath)
 	if ((srcFileAndPath == NULL) || (dstFileAndPath == NULL))
 		return -1;
 
-	// open the source first: opening the destination "wb" truncates it, which
-	// must not happen when the source turns out to be missing
+	// open the source first: opening the destination truncates it, which
+	// must not happen when the source turns out to be missing.
+	// Flawfinder: ignore - the source is the caller's choice, read only
 	FILE * infp = fopen(srcFileAndPath,"rb");
 	if (infp == NULL)
 		return -1;
-	FILE * outfp = fopen(dstFileAndPath,"wb");
+	// Destinations are on the user-writable media partition: never write
+	// through a symlink planted there.
+	// Flawfinder: ignore - O_NOFOLLOW
+	int outfd = open(dstFileAndPath, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0666);
+	FILE * outfp = (outfd == -1) ? NULL : fdopen(outfd, "wb");
 	if (outfp == NULL) {
-		fclose(infp);
+		if (outfd != -1)
+			(void) close(outfd);
+		(void) fclose(infp);
 		return -1;
 	}
 
 	char buffer[2048];
 	bool success=true;
-	while (!feof(infp)) {
-		size_t r = fread(buffer,1,2048,infp);
-		if ((r == 0) && (ferror(infp))) {
+	for (;;) {
+		size_t r = fread(buffer, 1, sizeof(buffer), infp);
+		if (r > 0 && fwrite(buffer, 1, r, outfp) != r) {
 			success=false;
 			break;
 		}
-		size_t w = fwrite(buffer,1,r,outfp);
-		if (w < r) {
-			success=false;
+		if (r < sizeof(buffer)) {	// end of file, or an error
+			if (ferror(infp))
+				success=false;
 			break;
 		}
 	}
 
-	fflush(infp);
-	fflush(outfp);	//apparently our filesystem doesn't like to commit even on close
-	fclose(infp);
-	fclose(outfp);
+	(void) fclose(infp);	// read only: nothing to lose
+	// a write error can surface only when the buffer is flushed
+	if (fflush(outfp) != 0)	//apparently our filesystem doesn't like to commit even on close
+		success=false;
+	if (fclose(outfp) != 0)
+		success=false;
 	if (!success) // incomplete copy
 	{
 		(void) unlink(dstFileAndPath);
@@ -323,7 +211,7 @@ int fileCopy(const char * srcFileAndPath,const char * dstFileAndPath)
 	return 1;
 }
 
-int filesizeOnFilesystem(const char * pathAndFile)
+long long filesizeOnFilesystem(const char * pathAndFile)
 {
 	if (pathAndFile == NULL)
 		return 0;
@@ -331,25 +219,7 @@ int filesizeOnFilesystem(const char * pathAndFile)
 	struct stat buf;
 	if (-1 == ::stat(pathAndFile, &buf ) )
 		return 0;
-	return buf.st_size;
-}
-
-unsigned int getRNG_UInt()
-{
-	FILE * fp = fopen("/dev/urandom","rb");
-	if (fp == NULL) {
-		//can't open RNG. Use a much less random method
-		return g_random_int();
-	}
-
-	unsigned int r=0;
-	size_t nr = fread(&r, 1, sizeof(r), fp);
-	fclose(fp);
-	if (nr != sizeof(r)) {
-		// reading urandom failed; fall back to a weaker source
-		return g_random_int();
-	}
-	return r;
+	return static_cast<long long>(buf.st_size);
 }
 
 //// wrappers for now, in case more processing/error checking is needed on the inp/outp values (probably should)
@@ -366,103 +236,11 @@ int urlEncodeFilename(std::string& encodedName,const std::string& decodedName)
 	return 1;
 }
 
-static const std::string base64_chars =
-			 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-			 "abcdefghijklmnopqrstuvwxyz"
-			 "0123456789+/";
-
-
-static inline bool is_base64(unsigned char c) {
-  return (isalnum(c) || (c == '+') || (c == '/'));
-}
-
-std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
-  std::string ret;
-  int i = 0;
-  unsigned char char_array_3[3];
-  unsigned char char_array_4[4];
-
-  while (in_len--) {
-	char_array_3[i++] = *(bytes_to_encode++);
-	if (i == 3) {
-	  char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-	  char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-	  char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-	  char_array_4[3] = char_array_3[2] & 0x3f;
-
-	  for(i = 0; (i <4) ; i++)
-		ret += base64_chars[char_array_4[i]];
-	  i = 0;
-	}
-  }
-
-  if (i)
-  {
-	for(int j = i; j < 3; j++)
-	  char_array_3[j] = '\0';
-
-	char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-	char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-	char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-	char_array_4[3] = char_array_3[2] & 0x3f;
-
-	for (int j = 0; (j < i + 1); j++)
-	  ret += base64_chars[char_array_4[j]];
-
-	while((i++ < 3))
-	  ret += '=';
-
-  }
-
-  return ret;
-
-}
-
-std::string base64_decode(std::string const& encoded_string) {
-  int in_len = encoded_string.size();
-  int i = 0;
-  int in_ = 0;
-  unsigned char char_array_4[4], char_array_3[3];
-  std::string ret;
-
-  while (in_len-- && ( encoded_string[in_] != '=') && is_base64(encoded_string[in_])) {
-	char_array_4[i++] = encoded_string[in_]; in_++;
-	if (i ==4) {
-	  for (i = 0; i <4; i++)
-		char_array_4[i] = base64_chars.find(char_array_4[i]);
-
-	  char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-	  char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-	  char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-	  for (i = 0; (i < 3); i++)
-		ret += char_array_3[i];
-	  i = 0;
-	}
-  }
-
-  if (i) {
-	for (int j = i; j <4; j++)
-	  char_array_4[j] = 0;
-
-	for (int j = 0; j <4; j++)
-	  char_array_4[j] = base64_chars.find(char_array_4[j]);
-
-	char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-	char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-	char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-	for (int j = 0; (j < i - 1); j++) ret += char_array_3[j];
-  }
-
-  return ret;
-}
-
 bool extractFromJson(const std::string& jsonString,const std::string& key,std::string& r_value)
 {
 	JValue root = JDomParser::fromString(jsonString);
 
-	return root.isObject() ? extractFromJson(std::move(root), key, r_value) : false;
+	return root.isObject() ? extractFromJson(root, key, r_value) : false;
 }
 
 bool extractFromJson(const JValue &root,const std::string& key, std::string& r_value)
@@ -486,16 +264,11 @@ int createTempFile(const std::string& baseDir,const std::string& tag,const std::
 {
 
 	std::string templateStr = baseDir + std::string("/file_")+std::string(tag)+std::string("_XXXXXX");
-	char * templateFileName = new char[templateStr.length()+2];
-	if (!templateFileName){
-		return 0;
-	}
-	strcpy(templateFileName,templateStr.c_str());
-	mode_t old_mask = umask(S_IWGRP | S_IWOTH);
-	int fd = mkstemp(templateFileName);
-	umask(old_mask);
-	templateStr = std::string(templateFileName);
-	delete[] templateFileName;
+	std::vector<char> templateFileName(templateStr.begin(), templateStr.end());
+	templateFileName.push_back('\0');
+	// glibc's mkstemp creates the file 0600 and O_EXCL, whatever the umask
+	int fd = mkstemp(templateFileName.data()); // Flawfinder: ignore
+	templateStr = std::string(templateFileName.data());
 
 	if (fd == -1) {
 		return 0;
@@ -514,42 +287,6 @@ int createTempFile(const std::string& baseDir,const std::string& tag,const std::
 		return 0;
 	}
 	return 1;
-}
-
-void string_to_lower(std::string& str)
-{
-	std::transform(str.begin(), str.end(), str.begin(), tolower);
-}
-
-std::string & append_format(std::string & str, const char * format, ...)
-{
-	if (format == 0)
-		return str;
-	va_list args;
-	va_start(args, format);
-
-	va_list args_copy;
-	va_copy(args_copy, args);
-	char stackBuffer[1024];
-	int result = vsnprintf(stackBuffer, G_N_ELEMENTS(stackBuffer), format, args_copy);
-	va_end(args_copy);
-
-	if (result > -1 && result < (int) G_N_ELEMENTS(stackBuffer))
-	{   // stack buffer was sufficiently large. Common case with no temporary dynamic buffer.
-		str.append(stackBuffer, result);
-	}
-	else if (result > -1)
-	{
-		int length = result + 1;
-		char * buffer = new char[length];
-		result = vsnprintf(buffer, length, format, args);
-		if (result > 0)
-			str.append(buffer, result);
-		delete[] buffer;
-	}
-
-	va_end(args);
-	return str;
 }
 
 } //end Utils namespace

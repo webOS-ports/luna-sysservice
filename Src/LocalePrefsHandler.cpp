@@ -47,7 +47,7 @@ std::list<std::string> LocalePrefsHandler::keys() const
 	return k;
 }
 
-bool LocalePrefsHandler::validateLocale(const JValue &value)
+bool LocalePrefsHandler::validateLocale(const JValue &value) const
 {
 	if (!value.isObject())
 		return false;
@@ -100,10 +100,9 @@ bool LocalePrefsHandler::validateLocale(const JValue &value)
 	}
 
 	return true;
-
 }
 
-bool LocalePrefsHandler::validateRegion(const JValue &value)
+bool LocalePrefsHandler::validateRegion(const JValue &value) const
 {
 	if (!value.isObject())
 		return false;
@@ -150,26 +149,12 @@ bool LocalePrefsHandler::validate(const std::string& key, const pbnjson::JValue 
 	return false;
 }
 
-void LocalePrefsHandler::valueChangedLocale(const JValue &)
+void LocalePrefsHandler::valueChanged(const std::string&, const JValue &)
 {
-	// nothing to do
+	// nothing to do for either key
 }
 
-void LocalePrefsHandler::valueChangedRegion(const JValue &)
-{
-	// nothing to do
-}
-
-void LocalePrefsHandler::valueChanged(const std::string& key, const JValue &value)
-{
-	// We will assume that the value has been validated
-	if (key == "locale")
-		valueChangedLocale(value);
-	else if (key == "region")
-		valueChangedRegion(value);
-}
-
-JValue LocalePrefsHandler::valuesForLocale()
+JValue LocalePrefsHandler::valuesForLocale() const
 {
 	JObject json;
 	JArray langArrayObj;
@@ -198,7 +183,7 @@ JValue LocalePrefsHandler::valuesForLocale()
 	return json;
 }
 
-JValue LocalePrefsHandler::valuesForRegion()
+JValue LocalePrefsHandler::valuesForRegion() const
 {
 	JObject json;
 	JArray regArrayObj;
@@ -231,55 +216,8 @@ JValue LocalePrefsHandler::valuesForKey(const std::string& key)
 
 void LocalePrefsHandler::init()
 {
-	readCurrentLocaleSetting();
-	readCurrentRegionSetting();
 	readLocaleFile();
 	readRegionFile();
-}
-
-void LocalePrefsHandler::readCurrentRegionSetting()
-{
-	std::string region = PrefsDb::instance()->getPref("region");
-
-	if (!region.empty()) {
-
-		JValue json = JDomParser::fromString(region);
-		if (json.isObject()) {
-
-			JValue label = json["countryCode"];
-			if (label.isString()) {
-
-				m_regionCode = label.asString();
-				return;
-			}
-		}
-	}
-
-	m_regionCode = "us";
-}
-
-void LocalePrefsHandler::readCurrentLocaleSetting()
-{
-	std::string locale = PrefsDb::instance()->getPref("locale");
-	
-	if (!locale.empty()) {
-
-		JValue json = JDomParser::fromString(locale);
-		if (json.isObject()) {
-
-			JValue lc = json["languageCode"];
-			JValue cc = json["countryCode"];
-			if (lc.isString() && cc.isString()) {
-
-				m_languageCode = lc.asString();
-				m_countryCode = cc.asString();
-				return;
-			}
-		}
-	}
-
-	m_languageCode = "en";
-	m_countryCode = "us";
 }
 
 void LocalePrefsHandler::readLocaleFile()
@@ -370,14 +308,3 @@ void LocalePrefsHandler::readRegionFile()
 		m_regionEntryList.push_back(regionEntry);
 	}
 }
-
-std::string LocalePrefsHandler::currentLocale() const
-{
-	return m_languageCode + "_"  + m_countryCode;
-}
-
-std::string LocalePrefsHandler::currentRegion() const
-{
-	return m_regionCode;
-}
-

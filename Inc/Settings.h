@@ -26,7 +26,7 @@
 /**
   * Schema Error Options
   */
-enum ESchemaErrorOptions
+enum ESchemaErrorOptions : unsigned char
 {
 	EIgnore = 0,            /**< Ignore the schema */
 	EValidateAndContinue,   /**< Validate, Log the error & Continue */
@@ -34,6 +34,12 @@ enum ESchemaErrorOptions
 	EValidateAndErrorAlways, /**< Validate, Log the error & Reply with correct schema (even to empty sender) */
 	EDefault                /**< Default, loads the value from settings (luna.conf) file  */
 };
+
+/**
+  * Sets option to value if value is one of ESchemaErrorOptions, and returns
+  * whether it was. Leaves option as it is otherwise.
+  */
+bool schemaErrorOptionFromInt(int value, ESchemaErrorOptions& option);
 
 class Settings : public Singleton<Settings>
 {

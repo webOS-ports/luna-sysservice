@@ -72,14 +72,14 @@ namespace {
 		const TimePrefsHandler::TimeSources &sources = TimePrefsHandler::instance()->timeSources();
 		for (size_t i = 0; i < sources.size(); ++i)
 		{
-			int priority = sources.size()-1 - i + basePriority;
+			int priority = static_cast<int>(sources.size() - 1 - i) + basePriority;
 			clockHandler.setup(sources[i], priority);
 		}
 	}
 } // anonymous namespace
 
 static bool cbComPalmImage2Status(LSHandle* lsHandle, LSMessage *message,
-                                  void *user_data)
+                                  void * /*user_data*/)
 {
 	// {"serviceName": string, "connected": boolean}
 	LSMessageJsonParser parser(message, STRICT_SCHEMA(PROPS_2(PROPERTY(serviceName, string),
@@ -197,8 +197,9 @@ init_signals(void) {
 
 int main(int argc, char ** argv)
 {
-	setenv("QT_PLUGIN_PATH","/usr/plugins",1);
-	setenv("QT_QPA_PLATFORM", "minimal",1);
+	// No other thread exists yet.
+	setenv("QT_PLUGIN_PATH","/usr/plugins",1); // NOLINT(concurrency-mt-unsafe)
+	setenv("QT_QPA_PLATFORM", "minimal",1); // NOLINT(concurrency-mt-unsafe)
 
 	g_mainloop.reset(g_main_loop_new(nullptr, false));
 
@@ -212,7 +213,7 @@ int main(int argc, char ** argv)
 		// error already reported
 		return 1;
 	}
-	setLogLevel(settings->m_logLevel.c_str());
+	setLogLevel(settings->m_logLevel);
 
 	init_signals();
 

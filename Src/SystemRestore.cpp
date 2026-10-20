@@ -17,6 +17,10 @@
 #include "SystemRestore.h"
 
 #include <cassert>
+#include <ctime>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <glib.h>
 
@@ -36,7 +40,21 @@
 
 using namespace pbnjson;
 
-SystemRestore::SystemRestore() : m_msmState(Phone)
+bool SystemRestore::writeTokenFile(const char* path)
+{
+	// Flawfinder: ignore - O_NOFOLLOW, and O_CREAT gives a new file our own mode
+	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0666);
+	if (fd < 0)
+		return false;
+
+	// doesn't matter what is in here, but a timestamp seems sane
+	const std::string stamp = std::to_string(static_cast<long long>(time(nullptr)));
+	bool ok = write(fd, stamp.data(), stamp.size()) == static_cast<ssize_t>(stamp.size());
+	ok = (close(fd) == 0) && ok;
+	return ok;
+}
+
+SystemRestore::SystemRestore()
 {
 	do {
 		//load the defaults file
@@ -475,12 +493,8 @@ int SystemRestore::startupConsistencyCheck()
 
 		//create token if all these succeeded
 		if (rc == 2) {
-			FILE * fp = fopen(PrefsDb::s_systemTokenFileAndPath,"w");
-			if (fp != NULL) {
-				fprintf(fp,"%lu",time(NULL));		//doesn't matter what I put in here, but timestamp seems sane
-				fflush(fp);
-				fclose(fp);
-			}
+			if (!writeTokenFile(PrefsDb::s_systemTokenFileAndPath))
+				PmLogWarning(sysServiceLogContext(), "TOKEN_WRITE_FAILED", 0, "failed to write the system token");
 		}
 		else {
 			PmLogWarning(sysServiceLogContext(), "TOKEN_MISSING", 0, "running - system token missing and WAS NOT written because one of the restore functions failed!");
@@ -557,49 +571,50 @@ int SystemRestore::runtimeConsistencyCheck()
 	return 1;
 }
 
-bool SystemRestore::msmAvailCallback(LSHandle* handle, LSMessage* message, void* ctxt)
+bool SystemRestore::msmAvailCallback(LSHandle* /*handle*/, LSMessage* message, void* /*ctxt*/)
 {
 	if (LSMessageIsHubErrorMessage(message)) {  // returns false if message is NULL
 		PmLogWarning(sysServiceLogContext(), "HUB_ERROR_MESSAGE", 0, "The message received is an error message from the hub");
 		return true;
 	}
-	return SystemRestore::instance()->msmAvail(message);
+	return msmAvail(message);
 }
 
-bool SystemRestore::msmProgressCallback(LSHandle* handle, LSMessage* message, void* ctxt)
+bool SystemRestore::msmProgressCallback(LSHandle* /*handle*/, LSMessage* message, void* /*ctxt*/)
 {
 	if (LSMessageIsHubErrorMessage(message)) {  // returns false if message is NULL
 		PmLogWarning(sysServiceLogContext(), "HUB_ERROR_MESSAGE", 0, "The message received is an error message from the hub");
 		return true;
 	}
-	return SystemRestore::instance()->msmProgress(message);
+	return msmProgress(message);
 }
 
-bool SystemRestore::msmEntryCallback(LSHandle* handle, LSMessage* message, void* ctxt)
+bool SystemRestore::msmEntryCallback(LSHandle* /*handle*/, LSMessage* message, void* /*ctxt*/)
 {
 	if (LSMessageIsHubErrorMessage(message)) {  // returns false if message is NULL
 		PmLogWarning(sysServiceLogContext(), "HUB_ERROR_MESSAGE", 0, "The message received is an error message from the hub");
 		return true;
 	}
-	return SystemRestore::instance()->msmEntry(message);
+	return msmEntry(message);
 }
 
-bool SystemRestore::msmFsckingCallback(LSHandle* handle, LSMessage* message, void* ctxt)
+bool SystemRestore::msmFsckingCallback(LSHandle* /*handle*/, LSMessage* message, void* /*ctxt*/)
 {
 	if (LSMessageIsHubErrorMessage(message)) {  // returns false if message is NULL
 		PmLogWarning(sysServiceLogContext(), "HUB_ERROR_MESSAGE", 0, "The message received is an error message from the hub");
 		return true;
 	}
-	return SystemRestore::instance()->msmFscking(message);
+	PMLOG_TRACE("msmFscking()");
+	return true;
 }
 
-bool SystemRestore::msmPartitionAvailCallback(LSHandle* handle, LSMessage* message, void* ctxt)
+bool SystemRestore::msmPartitionAvailCallback(LSHandle* /*handle*/, LSMessage* message, void* /*ctxt*/)
 {
 	if (LSMessageIsHubErrorMessage(message)) {  // returns false if message is NULL
 		PmLogWarning(sysServiceLogContext(), "HUB_ERROR_MESSAGE", 0, "The message received is an error message from the hub");
 		return true;
 	}
-	return SystemRestore::instance()->msmPartitionAvailable(message);
+	return msmPartitionAvailable(message);
 }
 
 
@@ -669,21 +684,8 @@ bool SystemRestore::msmEntry(LSMessage* message)
 	JValue mode = parser.get()["new-mode"];
 	if (!mode.isValid()) return false;
 
-	if (mode.asString() == "brick") {
-		m_msmState = Brick;
-	}
-	else { //TODO: proper handling for all cases; for now, assume phone whenever not brick
-		m_msmState = Phone;
-	}
-
 	PmLogDebug(sysServiceLogContext(),"msmEntry(): MSM mode: [%s]", mode.asString().c_str());
 
-	return true;
-}
-
-bool SystemRestore::msmFscking(LSMessage* message)
-{
-	PMLOG_TRACE("msmFscking()");
 	return true;
 }
 

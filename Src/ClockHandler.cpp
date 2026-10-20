@@ -42,7 +42,7 @@ namespace {
 	LSMethod s_methods[]  = {
 		{ "getTime", &ClockHandler::cbGetTime, LUNA_METHOD_FLAG_DEPRECATED},
 		{ "setTime", &ClockHandler::cbSetTime, LUNA_METHOD_FLAG_DEPRECATED},
-		{ 0, 0 },
+		{ nullptr, nullptr, LUNA_METHOD_FLAGS_NONE },
 	};
 
 	// schema for /clock/setTime
@@ -291,7 +291,7 @@ bool ClockHandler::update(time_t offset, const std::string &clockTag /* = manual
 	return true;
 }
 
-bool ClockHandler::handleNotAvailableSource(std::string source)
+bool ClockHandler::handleNotAvailableSource(const std::string& source)
 {
 	ClocksMap::iterator it = m_clocks.find(source);
 	if (it == m_clocks.end())
@@ -394,10 +394,10 @@ bool ClockHandler::cbGetTime(LSHandle* lshandle, LSMessage *message, void *user_
 		return true;
 
 	std::string source;
-	bool manualOverride;
+	bool requestedOverride = false;
 	// rely on schema validation
 	(void) parser.get("source", source);
-	(void) parser.get("manualOverride", manualOverride);
+	(void) parser.get("manualOverride", requestedOverride);
 
 	std::string fallback;
 	bool haveFallback = parser.get("fallback", fallback);
@@ -410,7 +410,7 @@ bool ClockHandler::cbGetTime(LSHandle* lshandle, LSMessage *message, void *user_
 	ClockHandler::ClocksMap::const_iterator it = handler.m_clocks.end();
 
 	// override any source if manual override requested and system-wide user time selected
-	if (manualOverride && handler.m_manualOverride)
+	if (requestedOverride && handler.m_manualOverride)
 	{
 		it = handler.m_clocks.find(manual);
 		// if manual time is registered and set to some value

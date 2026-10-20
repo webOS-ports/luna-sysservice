@@ -30,17 +30,19 @@ public:
 		return object;
 	}
 
-	virtual ~Singleton()
+	virtual ~Singleton() // NOLINT(portability-template-virtual-member-function) body is valid for every T
 	{
 		object = nullptr;
 	}
 
-protected:
-	Singleton() = default;
 	Singleton(Singleton&) = delete;
 	void operator=(Singleton&) = delete;
 
 private:
+	// Only T itself can derive from Singleton<T>.
+	Singleton() = default;
+	friend T;
+
 	static T* object;
 };
 

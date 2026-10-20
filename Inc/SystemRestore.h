@@ -33,11 +33,6 @@ class SystemRestore : public Singleton<SystemRestore>
 	friend class Singleton<SystemRestore>;
 
 public:
-	typedef enum {
-		Phone,				//non-brick mode
-		Brick,			//functional brick mode state
-	} MSMState;
-	
 	static int startupConsistencyCheck();
 	static int runtimeConsistencyCheck();
 	static int createSpecialDirectories();
@@ -45,7 +40,7 @@ public:
 	int restoreDefaultRingtoneSetting();
 	int restoreDefaultWallpaperSetting();
 
-	bool isRingtoneSettingConsistent();
+	static bool isRingtoneSettingConsistent();
 	bool isWallpaperSettingConsistent();
 	// The check isWallpaperSettingConsistent() makes on the stored value: a
 	// JSON object whose "wallpaperFile" is an image that can be read.
@@ -58,9 +53,14 @@ public:
 	static bool msmEntryCallback(LSHandle* handle, LSMessage* message, void* ctxt);
 	static bool msmFsckingCallback(LSHandle* handle, LSMessage* message, void* ctxt);
 	static bool msmPartitionAvailCallback(LSHandle* handle, LSMessage* message, void* ctxt);
-	
-	MSMState getMSMState() 					{ return m_msmState;}
-	
+
+	/**
+	 * Writes the current time to path, which is on the user-writable media
+	 * partition: a symlink there is refused rather than followed. Returns
+	 * whether the whole file was written.
+	 */
+	static bool writeTokenFile(const char* path);
+
 protected:
 	SystemRestore();
 
@@ -77,13 +77,10 @@ protected:
 	int restoreDefaultRingtoneToMediaPartition();
 	int restoreDefaultWallpaperToMediaPartition();
 	
-	bool msmAvail(LSMessage* message);
-	bool msmProgress(LSMessage* message);
-	bool msmEntry(LSMessage* message);
-	bool msmFscking(LSMessage* message);
-	bool msmPartitionAvailable(LSMessage* message);
-	
-	MSMState m_msmState;
+	static bool msmAvail(LSMessage* message);
+	static bool msmProgress(LSMessage* message);
+	static bool msmEntry(LSMessage* message);
+	static bool msmPartitionAvailable(LSMessage* message);
 };
 
 #endif //SYSTEMRESTORE_H

@@ -1,0 +1,4 @@
+# Pre-existing compiler warnings (-Wall -Wextra on top of the recipe flags)
+# in luna-sysservice's own sources; build-matrix.sh fails on any other.
+# arch<TAB>compiler<TAB>file<TAB>option<TAB>message, no line numbers.
+# Never listed: warnings in tests/, which must stay at zero.

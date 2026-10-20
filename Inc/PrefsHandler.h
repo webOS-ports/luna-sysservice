@@ -36,7 +36,7 @@ public:
 
 	virtual std::list<std::string> keys() const = 0;
 	virtual bool validate(const std::string& key, const pbnjson::JValue &value) = 0;
-	virtual bool validate(const std::string& key, const pbnjson::JValue &value, const std::string& originId)
+	virtual bool validate(const std::string& key, const pbnjson::JValue &value, const std::string& /*originId*/)
 	{ return validate(key,value); }
 	virtual void valueChanged(const std::string& key, const pbnjson::JValue &value) = 0;
 	virtual void valueChanged(const std::string& key,const std::string& strval)
@@ -65,7 +65,7 @@ public:
 	// FIXME: We very likely need a windowed version the above function
 	virtual bool isPrefConsistent() { return true; }
 	virtual void restoreToDefault() {}
-	virtual bool shouldRefreshKeys(std::map<std::string,std::string>& keyvalues) { return false;}
+	virtual bool shouldRefreshKeys(std::map<std::string,std::string>& /*keyvalues*/) { return false;}
 
 	LSHandle * getServiceHandle() { return m_serviceHandle;}
 

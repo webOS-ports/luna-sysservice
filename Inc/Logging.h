@@ -29,7 +29,8 @@ PmLogContext& sysServiceLogContext();
 
 void setLogLevel(const std::string& loglstr);
 
-void logInfo(const char* file, int line, const char* func, const char *fmt, ...);
+void logInfo(const char* file, int line, const char* func, const char *fmt, ...)
+	__attribute__((format(printf, 4, 5)));
 
 #ifdef WEBOS_QT
 void outputQtMessages(QtMsgType type, const QMessageLogContext &context, const QString &msg);

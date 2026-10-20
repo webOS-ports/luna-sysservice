@@ -14,7 +14,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <cctype>
 #include <string>
+
+#include <unistd.h>
 
 #include <gtest/gtest.h>
 #include <QImage>
@@ -69,4 +72,30 @@ TEST_F(WallpaperConsistencyTest, ASettingThatIsNoWallpaperIsNot)
 	EXPECT_FALSE(SystemRestore::isWallpaperPrefConsistent("[]"));
 	EXPECT_FALSE(SystemRestore::isWallpaperPrefConsistent("{\"wallpaperName\":\"w.png\"}"));
 	EXPECT_FALSE(SystemRestore::isWallpaperPrefConsistent("{\"wallpaperFile\":42}"));
+}
+
+TEST(SystemRestoreToken, WritesTheTime)
+{
+	TempDir dir;
+	ASSERT_FALSE(dir.path().empty());
+
+	ASSERT_TRUE(SystemRestore::writeTokenFile(dir.file("token").c_str()));
+	std::string stamp = TempDir::contents(dir.file("token"));
+	ASSERT_FALSE(stamp.empty());
+	for (char c : stamp)
+		EXPECT_TRUE(isdigit(static_cast<unsigned char>(c))) << stamp;
+	EXPECT_GT(std::stoll(stamp), 1700000000LL);
+}
+
+// The token lives on the user-writable media partition: a symlink planted
+// there must not make the root-owned service overwrite its target.
+TEST(SystemRestoreToken, RefusesASymlink)
+{
+	TempDir dir;
+	ASSERT_FALSE(dir.path().empty());
+	ASSERT_TRUE(TempDir::write(dir.file("victim"), "precious"));
+	ASSERT_EQ(0, symlink(dir.file("victim").c_str(), dir.file("token").c_str()));
+
+	EXPECT_FALSE(SystemRestore::writeTokenFile(dir.file("token").c_str()));
+	EXPECT_EQ("precious", TempDir::contents(dir.file("victim")));
 }

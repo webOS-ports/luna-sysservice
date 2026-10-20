@@ -17,6 +17,7 @@
 #include "ImageServices.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <glib.h>
 
 #include <QtGui/QImage>
@@ -43,10 +44,10 @@ using namespace pbnjson;
  */
 
 LSMethod ImageServices::s_methods[] = {
-	{ "convert" , ImageServices::lsConvertImage },
-	{ "imageInfo" , ImageServices::lsImageInfo },
-	{ "ezResize" , ImageServices::lsEzResize },
-	{ 0, 0 }
+	{ "convert" , ImageServices::lsConvertImage, LUNA_METHOD_FLAGS_NONE },
+	{ "imageInfo" , ImageServices::lsImageInfo, LUNA_METHOD_FLAGS_NONE },
+	{ "ezResize" , ImageServices::lsEzResize, LUNA_METHOD_FLAGS_NONE },
+	{ nullptr, nullptr, LUNA_METHOD_FLAGS_NONE }
 };
 
 /*! \page com_palm_image_service
@@ -117,7 +118,7 @@ Example response for a failed call:
 \endcode
 */
 //static
-bool ImageServices::lsConvertImage(LSHandle* lsHandle, LSMessage* message,void* user_data)
+bool ImageServices::lsConvertImage(LSHandle* lsHandle, LSMessage* message, void* /*user_data*/)
 {
 	std::string errorText;
 	bool specOn = false;
@@ -313,7 +314,7 @@ Example response for a failed call:
 \endcode
 */
 //static
-bool ImageServices::lsEzResize(LSHandle* lsHandle, LSMessage* message,void* user_data)
+bool ImageServices::lsEzResize(LSHandle* lsHandle, LSMessage* message, void* /*user_data*/)
 {
 	std::string errorText;
 
@@ -430,7 +431,7 @@ Example response in case of a failure:
 \endcode
 */
 //static
-bool ImageServices::lsImageInfo(LSHandle* lsHandle, LSMessage* message,void* user_data)
+bool ImageServices::lsImageInfo(LSHandle* lsHandle, LSMessage* message, void* /*user_data*/)
 {
 	std::string errorText;
 
@@ -455,7 +456,7 @@ bool ImageServices::lsImageInfo(LSHandle* lsHandle, LSMessage* message,void* use
 		if (!size.isValid()) {
 			// format can't report the size without decoding - decode
 			QImage image;
-			if (reader.read(&image))
+			if (reader.read(&image)) // Flawfinder: ignore - QImageReader::read, not read(2)
 				size = image.size();
 		}
 		srcWidth = size.width();
@@ -560,8 +561,13 @@ bool ImageServices::ezResize(const std::string& pathToSourceFile,
 							 uint32_t widthFinal, uint32_t heightFinal,
 							 std::string& r_errorText)
 {
-	qDebug("From: [%s], To: [%s], target: {Type: [%s], w:%d, h:%d}",
+	qDebug("From: [%s], To: [%s], target: {Type: [%s], w:%u, h:%u}",
 			pathToSourceFile.c_str(), pathToDestFile.c_str(), destType, widthFinal, heightFinal);
+
+	if (widthFinal > INT_MAX || heightFinal > INT_MAX) {
+		r_errorText = "ezResize: destination size out of range";
+		return false;
+	}
 
 	QImageReader reader(QString::fromStdString(pathToSourceFile));
 	if(!reader.canRead()) {
@@ -570,13 +576,13 @@ bool ImageServices::ezResize(const std::string& pathToSourceFile,
 	}
 
 	QImage image;
-	if (!reader.read(&image)) {
+	if (!reader.read(&image)) { // Flawfinder: ignore - QImageReader::read, not read(2)
 		r_errorText = reader.errorString().toStdString();
 		return false;
 	}
 	// cropped rescale, see http://qt-project.org/doc/qt-4.8/qt.html#AspectRatioMode-enum
 
-	QImage result(widthFinal, heightFinal, QImage::Format_ARGB32_Premultiplied);
+	QImage result(static_cast<int>(widthFinal), static_cast<int>(heightFinal), QImage::Format_ARGB32_Premultiplied);
 
 	if(result.isNull()) {
 		r_errorText = "ezResize: unable to allocate memory for QImage";
@@ -586,7 +592,7 @@ bool ImageServices::ezResize(const std::string& pathToSourceFile,
 
 	QPainter p(&result);
 	p.setRenderHint(QPainter::SmoothPixmapTransform);
-	p.drawImage(QRect(0,0,widthFinal, heightFinal), image);
+	p.drawImage(QRect(0, 0, static_cast<int>(widthFinal), static_cast<int>(heightFinal)), image);
 	p.end();
 //    image = image.scaled(widthFinal, heightFinal, Qt::KeepAspectRatioByExpanding);
 	PMLOG_TRACE("About to save image");
@@ -604,7 +610,7 @@ bool ImageServices::convertImage(const std::string& pathToSourceFile,
 								 uint32_t widthFinal,uint32_t heightFinal,
 								 std::string& r_errorText)
 {
-	qDebug("From: [%s], To: [%s], focus:{x:%f,y:%f}, target: {Type: [%s], w:%d, h:%d}, scale: %f",
+	qDebug("From: [%s], To: [%s], focus:{x:%f,y:%f}, target: {Type: [%s], w:%u, h:%u}, scale: %f",
 			pathToSourceFile.c_str(), pathToDestFile.c_str(), focusX, focusY, destType, widthFinal, heightFinal, scale);
 
 	QImageReader reader(QString::fromStdString(pathToSourceFile));
@@ -640,11 +646,15 @@ bool ImageServices::convertImage(const std::string& pathToSourceFile,
 
 	// crop dimensions are optional - default to the scaled source size
 	if (widthFinal == 0)
-		widthFinal = (uint32_t) qMax(1, qRound(image.width() * scale));
+		widthFinal = static_cast<uint32_t>(qMax(1, qRound(image.width() * scale)));
 	if (heightFinal == 0)
-		heightFinal = (uint32_t) qMax(1, qRound(image.height() * scale));
+		heightFinal = static_cast<uint32_t>(qMax(1, qRound(image.height() * scale)));
+	if (widthFinal > INT_MAX || heightFinal > INT_MAX) {
+		r_errorText = "convertImage: destination size out of range";
+		return false;
+	}
 
-	QImage dest(widthFinal, heightFinal, QImage::Format_ARGB32_Premultiplied);
+	QImage dest(static_cast<int>(widthFinal), static_cast<int>(heightFinal), QImage::Format_ARGB32_Premultiplied);
 	if (dest.isNull()) {
 		r_errorText = "convertImage: unable to allocate memory for QImage";
 		return false;
@@ -679,7 +689,7 @@ bool ImageServices::convertImage(const std::string& pathToSourceFile,
 	}
 
 	QImage image;
-	if (!reader.read(&image)) {
+	if (!reader.read(&image)) { // Flawfinder: ignore - QImageReader::read, not read(2)
 		r_errorText = reader.errorString().toStdString();
 		return false;
 	}

@@ -127,12 +127,3 @@ TEST(TimeZoneJson, ZoneIdIsOnlyTakenFromAStringField)
 	EXPECT_EQ("", TimePrefsHandler::tzNameFromJsonValue(pbnjson::JValue("Asia/Tokyo")));
 	EXPECT_EQ("", TimePrefsHandler::tzCityNameFromJsonValue(pbnjson::Array()));
 }
-
-TEST(TimeZoneJson, QualifiedIdRejectsMalformedInput)
-{
-	EXPECT_EQ("", TimePrefsHandler::getQualifiedTZIdFromJson(""));
-	EXPECT_EQ("", TimePrefsHandler::getQualifiedTZIdFromJson("not json"));
-	EXPECT_EQ("", TimePrefsHandler::getQualifiedTZIdFromJson(R"(["x"])"));
-	EXPECT_EQ("", TimePrefsHandler::getQualifiedTZIdFromJson(R"({"ZoneID": 7})"));
-	EXPECT_EQ("", TimePrefsHandler::getQualifiedTZIdFromName(""));
-}

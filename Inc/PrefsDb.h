@@ -44,10 +44,10 @@ public:
 	std::map<std::string, std::string> getPrefs(const std::list<std::string>& keys);	
 	std::map<std::string,std::string> getAllPrefs();
 
-	int merge(PrefsDb * p_sourceDb,bool overwriteSameKeys=true);
+	int merge(const PrefsDb * p_sourceDb,bool overwriteSameKeys=true);
 	int merge(const std::string& sourceDbFilename,bool overwriteSameKeys=true);
 
-	int copyKeys(PrefsDb * p_sourceDb,const std::list<std::string>& keys,bool overwriteSame=true);
+	int copyKeys(PrefsDb * p_sourceDb,const std::list<std::string>& keys,bool overwriteSameKeys=true);
 
 	const std::string& databaseFile() const
 	{ return m_dbFilename; }
@@ -77,7 +77,7 @@ public:
 	~PrefsDb() override;
 private:
 	PrefsDb();
-	PrefsDb(const std::string& standaloneDbFilename);
+	explicit PrefsDb(const std::string& standaloneDbFilename);
 
 	void openPrefsDb();
 	void closePrefsDb();

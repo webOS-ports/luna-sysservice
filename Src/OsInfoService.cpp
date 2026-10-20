@@ -25,8 +25,8 @@
 using namespace pbnjson;
 
 LSMethod s_os_methods[]  = {
-	{ "query",  OsInfoService::cbGetOsInformation },
-	{ 0, 0 },
+	{ "query",  OsInfoService::cbGetOsInformation, LUNA_METHOD_FLAGS_NONE },
+	{ nullptr, nullptr, LUNA_METHOD_FLAGS_NONE },
 };
 
 /*! \page com_palm_os_info_service Service API com.webos.service.systemservice/osInfo/
@@ -148,7 +148,7 @@ Example response for a failed call:
 }
 \endcode
 */
-bool OsInfoService::cbGetOsInformation(LSHandle* lsHandle, LSMessage *message, void *user_data)
+bool OsInfoService::cbGetOsInformation(LSHandle* lsHandle, LSMessage *message, void * /*user_data*/)
 {
     JObject reply;
     nyx_device_handle_t device = nullptr;

@@ -28,6 +28,9 @@
 #include <errno.h>
 #include <memory.h>
 #include <set>
+#include <algorithm>
+#include <iterator>
+#include <climits>
 #include <sys/sysinfo.h>
 
 #if defined(HAVE_LUNA_PREFS)
@@ -60,18 +63,9 @@ static std::string        s_localeStr = "en-US";
 static const std::string  s_file = "cppstrings.json";
 static const std::string  s_resources_path = "/usr/share/localization/luna-sysservice";
 
-#define					ORIGIN_NITZ			"nitz"
-#define					HOURFORMAT_12		"HH12"
-#define					HOURFORMAT_24		"HH24"
-
 #define					NITZVALIDITY_STATE_NITZVALID					"NITZVALID"
 #define					NITZVALIDITY_STATE_NITZINVALIDUSERNOTSET		"NITZINVALID_USERNOTSET"
 #define					NITZVALIDITY_STATE_NITZINVALIDUSERSET			"NITZINVALID_USERSET"
-
-#define DEBUG_TIMEPREFS 1
-
-#define ABSV(x) ((x) < 0 ? (x*-1) : (x))
-#define DIFFTIME(x,y) ((x) > (y) ? ((x)-(y)) : ((y)-(x)))
 
 #undef LSREPORT
 //#define LSREPORT(lse) g_critical( "in %s: %s => %s", __func__, (lse).func, (lse).message )
@@ -116,10 +110,9 @@ namespace {
 
 		unique.clear();
 		unique.reserve(array.arraySize());
-		for (ssize_t i = 0; i < array.arraySize(); ++i)
-		{
-			unique.push_back(array[i].asString());
-		}
+		auto items = array.items();
+		std::transform(items.begin(), items.end(), std::back_inserter(unique),
+		               [](const JValue &item) { return item.asString(); });
 
 		return true;
 	}
@@ -146,10 +139,10 @@ print_tzvars (void)
 
 static void
 set_tz(const char * tz) {
-	static gchar * env = NULL;
-	g_free(env);
-	env = g_strdup_printf("TZ=%s", tz);
-	putenv(env);
+	// setenv copies the value. (This used putenv() with a static buffer that
+	// it freed on the next call while environ still pointed into it: every
+	// second call read freed memory.)
+	setenv("TZ", tz, 1); // NOLINT(concurrency-mt-unsafe) single-threaded daemon
 	tzset();
 
 	PmLogDebug(sysServiceLogContext(),"%s: tz set to %s", __func__, tz);
@@ -160,11 +153,11 @@ set_tz(const char * tz) {
 static bool
 tz_exists(const char* tz_name) {
 #define ZONEINFO_PATH_PREFIX "/usr/share/zoneinfo/"
-	g_return_val_if_fail(tz_name != NULL, false);
-	g_return_val_if_fail(strlen(tz_name) > 1, false);
-	g_return_val_if_fail(tz_name[0] != '/', false);
-	g_return_val_if_fail(tz_name[0] != '.', false);
-	g_return_val_if_fail(strstr(tz_name, "..") == NULL, false);
+	// at least two characters, relative, and no way out of the zoneinfo tree
+	if (tz_name == NULL || tz_name[0] == '\0' || tz_name[1] == '\0')
+		return false;
+	if (tz_name[0] == '/' || tz_name[0] == '.' || strstr(tz_name, "..") != NULL)
+		return false;
 
 	char *path = g_build_filename(ZONEINFO_PATH_PREFIX, tz_name, NULL);
 	bool ret = g_file_test(path, G_FILE_TEST_IS_REGULAR);
@@ -183,10 +176,10 @@ struct TimeZoneInfo
 	std::string country;
 	std::string countryCode;
 	std::string jsonStringValue;
-	int   	dstSupported;
-	int   	offsetToUTC;
-	bool 	preferred;					//if set to true, then pick this TZ is searching by offset vs any others
-	int		howManyZonesForCountry;		//how many offsets (incl. this one) does this country (based on countryCode) span? e.g. USA = 9
+	int   	dstSupported = 0;
+	int   	offsetToUTC = 0;
+	bool 	preferred = false;			//if set to true, then pick this TZ is searching by offset vs any others
+	int		howManyZonesForCountry = 0;	//how many offsets (incl. this one) does this country (based on countryCode) span? e.g. USA = 9
 };
 
 namespace {
@@ -349,9 +342,10 @@ NitzParameters::NitzParameters()
 	memset(&_timeStruct,0,sizeof(_timeStruct));
 }
 
-NitzParameters::NitzParameters(struct tm& timeStruct,int offset,int dst,int mcc,int mnc,
-		bool timevalid,bool tzvalid,bool dstvalid,uint32_t remotetimeStamp)
-: _offset(offset)
+NitzParameters::NitzParameters(const struct tm& timeStruct,int offset,int dst,int mcc,int mnc,
+		bool timevalid,bool tzvalid,bool dstvalid)
+: _timeStruct(timeStruct)
+	, _offset(offset)
 	, _dst(dst)
 	, _mcc(mcc)
 	, _mnc(mnc)
@@ -360,25 +354,6 @@ NitzParameters::NitzParameters(struct tm& timeStruct,int offset,int dst,int mcc,
 	, _dstvalid(dstvalid)
 	, _localtimeStamp(time(NULL))
 {
-	(void) remotetimeStamp; // stamped with the local receipt time instead
-	memcpy(&_timeStruct,&timeStruct,sizeof(timeStruct));
-}
-
-void NitzParameters::stampTime()
-{
-	_localtimeStamp = time(NULL);
-}
-
-bool NitzParameters::valid(uint32_t threshold)
-{
-	/// not using timestamps anymore since the TIL sets the time directly
-
-//	uint32_t lt = time(NULL);
-//	uint32_t difft = (uint32_t)(DIFFTIME(_localtimeStamp,(uint32_t)time(NULL)));
-//	qDebug("%s: object(%u) ? (%u) current time = diff: %u , threshold: %u",__FUNCTION__,_localtimeStamp,lt,difft,threshold);
-//	if (difft > threshold)
-//		return false;
-	return true;
 }
 
 static JValue valuesFor_useNetworkTime( TimePrefsHandler * pTimePrefsHandler);
@@ -428,7 +403,7 @@ static LSMethod s_methods[]  = {
 	{ "setSystemNetworkTime", TimePrefsHandler::cbSetSystemNetworkTime, LUNA_METHOD_FLAG_DEPRECATED},
 	{ "setBroadcastTime",     TimePrefsHandler::cbSetBroadcastTime, LUNA_METHOD_FLAG_DEPRECATED},
 	{ "setTimeWithNTP",       TimePrefsHandler::cbSetTimeWithNTP, LUNA_METHOD_FLAG_DEPRECATED},
-	{ 0, 0 },
+	{ nullptr, nullptr, LUNA_METHOD_FLAGS_NONE },
 };
 
 typedef JValue (*valuesForKeyFnPtr)(TimePrefsHandler * pTimePrefsHandler);
@@ -450,12 +425,8 @@ static const TimePrefKey timePrefKeys[] = {
 	{"nitzValidity",NULL,NULL}
 };
 
-const time_t TimePrefsHandler::m_driftPeriodDefault = (4*60*60);
+const time_t TimePrefsHandler::m_driftPeriodDefault = static_cast<time_t>(4) * 60 * 60;
 const time_t TimePrefsHandler::m_driftPeriodDisabled = -1;
-
-static inline bool isSpaceOrNull(char v) {
-	return (v == 0 || isspace(v));
-}
 
 void convertString(const char* str, std::string& convertedStr)
 {
@@ -634,7 +605,9 @@ void TimePrefsHandler::updateTimeZoneInfo()
     }
 }
 
-void TimePrefsHandler::switchTimeZone(bool b_recover)
+// Recursion with valueChanged() is bounded: switchTimeZone() calls it only
+// for "timeZone", and that key never calls back here.
+void TimePrefsHandler::switchTimeZone(bool b_recover) // NOLINT(misc-no-recursion)
 {
 	if (b_recover)
 	{
@@ -645,7 +618,7 @@ void TimePrefsHandler::switchTimeZone(bool b_recover)
 
 		if (lastTzName == "") {
 			lastTzName = s_failsafeDefaultZone.name;
-			PrefsDb::instance()->setPref("lastTimeZone",lastTzName.c_str());
+			PrefsDb::instance()->setPref("lastTimeZone",lastTzName);
 		}
 
 		PmLogDebug(sysServiceLogContext(),"set TimeZone to [%s]",lastTzName.c_str());
@@ -658,7 +631,7 @@ void TimePrefsHandler::switchTimeZone(bool b_recover)
 				m_cpCurrentTimeZone->name);
 		PmLogDebug(sysServiceLogContext(),"set TimeZone to [%s]",m_cpCurrentTimeZone->name.c_str());
 
-		TimeZoneService::instance()->createTimeZoneFromEasData(getServiceHandle());
+		TimeZoneService::createTimeZoneFromEasData();
 
 		JValue jArgs = JObject();
 		jArgs.put("ZoneID", MANUAL_TZ_NAME);
@@ -672,7 +645,7 @@ void TimePrefsHandler::switchTimeZone(bool b_recover)
         PrefsFactory::instance()->postPrefChange("timeZone", timeZone);
 }
 
-void TimePrefsHandler::valueChanged(const std::string& key, const JValue &value)
+void TimePrefsHandler::valueChanged(const std::string& key, const JValue &value) // NOLINT(misc-no-recursion) see switchTimeZone()
 {
 	bool bval;
 	std::string strval;
@@ -751,7 +724,7 @@ void TimePrefsHandler::valueChanged(const std::string& key, const JValue &value)
 				setTimeZone(m_cpCurrentTimeZone);
 			}
 			else {
-				int currOffsetToUTC = offsetToUtcSecs()/60;
+				int currOffsetToUTC = static_cast<int>(offsetToUtcSecs() / 60);
 				//last chance to get a valid timezone given the offset
 
 				m_cpCurrentTimeZone = timeZone_ZoneFromOffset(currOffsetToUTC);
@@ -830,7 +803,7 @@ JValue TimePrefsHandler::valuesForKey(const std::string& key)
 	return JObject();
 }
 
-bool TimePrefsHandler::cbLocaleHandler(LSHandle* sh, LSMessage* message, void* data)
+bool TimePrefsHandler::cbLocaleHandler(LSHandle* /*sh*/, LSMessage* message, void* /*data*/)
 {
 	do {
 		const char* str = LSMessageGetPayload(message);
@@ -931,6 +904,20 @@ JValue TimePrefsHandler::timeZoneListAsJson(const std::string& countryCode, cons
 	return TimePrefsHandler::s_timeZonesJson;
 }
 
+namespace {
+	// whether list (an array of zone objects) has one with ZoneID tzName
+	bool zoneListHas(const JValue &list, const std::string& tzName)
+	{
+		auto items = list.items();
+		return std::any_of(items.begin(), items.end(), [&tzName](const JValue &timezone) {
+			if (!timezone.isObject())
+				return false;
+			JValue zone_id = timezone["ZoneID"];
+			return zone_id.isString() && tzName == zone_id.asString();
+		});
+	}
+} // anonymous namespace
+
 bool TimePrefsHandler::isValidTimeZoneName(const std::string& tzName)
 {
 	if (!TimePrefsHandler::s_timeZonesJson.isValid())
@@ -939,45 +926,15 @@ bool TimePrefsHandler::isValidTimeZoneName(const std::string& tzName)
 	if(!tzName.compare(MANUAL_TZ_NAME)) return true;
 
 	JValue label = TimePrefsHandler::s_timeZonesJson["timeZone"];
-	if (!label.isArray()) {
+	if (!label.isArray())
 		return false;
-	}
-
-	for (const JValue& timezone: label.items()) {
-
-		if (!timezone.isObject()) continue;
-
-		//parse out the TZ name
-		JValue zone_id = timezone["ZoneID"];
-		if (!zone_id.isString()) {
-			continue;
-		}
-
-		if (tzName == zone_id.asString())
-			return true;
-	}
+	if (zoneListHas(label, tzName))
+		return true;
 
 	label = TimePrefsHandler::s_timeZonesJson["syszones"];
-	if (!label.isArray()) {
+	if (!label.isArray())
 		return false;
-	}
-
-	for (const JValue timezone: label.items()) {
-
-		if (!timezone.isObject()) continue;
-
-		//parse out the TZ name
-		JValue zone_id = timezone["ZoneID"];
-		if (!zone_id.isString()) {
-			continue;
-		}
-
-		if (tzName == zone_id.asString())
-			return true;
-	}
-
-	return false;
-
+	return zoneListHas(label, tzName);
 }
 
 static JValue valuesFor_useNetworkTime(TimePrefsHandler *)
@@ -995,7 +952,7 @@ static JValue valuesFor_useNetworkTimeZone(TimePrefsHandler *)
 	return JObject {{"useNetworkTimeZone", JArray {true, false}}};
 }
 
-static bool validateFor_useNetworkTimeZone(TimePrefsHandler * pTimePrefsHandler, const JValue &pValue)
+static bool validateFor_useNetworkTimeZone(TimePrefsHandler *, const JValue &pValue)
 {
 	return pValue.isBoolean();
 }
@@ -1141,7 +1098,7 @@ static JValue valuesFor_timeChangeLaunch(TimePrefsHandler *)
 	return JObject();
 }
 
-static bool	validateFor_timeChangeLaunch(TimePrefsHandler * pTimePrefsHandler, const JValue &pValue)
+static bool	validateFor_timeChangeLaunch(TimePrefsHandler *, const JValue &)
 {
 	return false; //this is a special key which can only be set via a setTimeChangeLaunch message
 }
@@ -1239,7 +1196,7 @@ void TimePrefsHandler::init()
 		setTimeZone(m_cpCurrentTimeZone);
 	}
 	else {
-		int currOffsetToUTC = offsetToUtcSecs()/60;
+		int currOffsetToUTC = static_cast<int>(offsetToUtcSecs() / 60);
 		//last chance to get a valid timezone given the offset
 		m_cpCurrentTimeZone = this->timeZone_ZoneFromOffset(currOffsetToUTC);
 		if (m_cpCurrentTimeZone == NULL)
@@ -1412,77 +1369,6 @@ std::string TimePrefsHandler::tzNameFromJsonString(const std::string& TZJson)
 	return zoneId;
 }
 
-/**
- * Scans s_timeZonesJson for ZoneID == tzName. Returns that json object as a string, or "" if none found
- *
- *
- */
-
-std::string TimePrefsHandler::getQualifiedTZIdFromName(const std::string& tzName)
-{
-	if (tzName.length() == 0)
-		return std::string();
-
-	JValue label = s_timeZonesJson["timeZone"];
-	if (!label.isArray()) {
-		PmLogWarning(sysServiceLogContext(), "JSON_ERROR", 0, "error on json object: it doesn't contain a timezones array");
-		return std::string();
-	}
-
-	for (const JValue timezone: label.items()) {
-
-		JValue zone_id = timezone["ZoneID"];
-		if (!zone_id.isString())
-			continue;
-
-		if (tzName == zone_id.asString())
-			return timezone.asString();
-	}
-
-	//try the sys zones
-	label = s_timeZonesJson["syszones"];
-	if (!label.isArray()) {
-		PmLogWarning(sysServiceLogContext(), "JSON_ERROR", 0, "error on json object: it doesn't contain a syszones array");
-	       	return std::string();
-	}
-
-	for (const JValue timezone: label.items()) {
-
-		JValue zone_id = timezone["ZoneID"];
-		if (!zone_id.isString())
-			continue;
-
-		if (tzName == zone_id.asString())
-			return timezone.asString();
-	}
-
-	return std::string();
-}
-
-std::string TimePrefsHandler::getQualifiedTZIdFromJson(const std::string& jsonTz)
-{
-	if (jsonTz.length() == 0)
-		return std::string();
-
-	std::string tzName;
-
-	JValue root = JDomParser::fromString(jsonTz);
-	if (!root.isObject()) {
-		return std::string();
-	}
-
-	JValue label = root["ZoneID"];
-	if (label.isString()) {
-		tzName = label.asString();
-	}
-	else {
-		PmLogWarning(sysServiceLogContext(), "JSON_ERROR", 0, "error on json object: it doesn't contain a ZoneID key");
-		return std::string();
-	}
-
-	return getQualifiedTZIdFromName(tzName);
-}
-
 //a replacement for the scanTimeZoneFile so that I only need to deal with 1 file...see init() for where the json obj is created
 void TimePrefsHandler::scanTimeZoneJson()
 {
@@ -1553,7 +1439,7 @@ void TimePrefsHandler::scanTimeZoneJson()
 	//go through the whole zone list and assign offset-per-country counter values
 	for (TimeZoneInfoList::iterator it = m_zoneList.begin(); it != m_zoneList.end();++it)
 	{
-		(*it)->howManyZonesForCountry = tmpCountryZoneCounterMap[(*it)->countryCode].size();
+		(*it)->howManyZonesForCountry = static_cast<int>(tmpCountryZoneCounterMap[(*it)->countryCode].size());
 	}
 
 	//go through the temp map and assign values to the final dst and non-dst maps
@@ -1589,11 +1475,11 @@ void TimePrefsHandler::scanTimeZoneJson()
 
 	PmLogDebug(sysServiceLogContext(),"found %zu timezones",m_zoneList.size());
 
-	for (TimeZoneMapIterator it = m_preferredTimeZoneMapDST.begin();it != m_preferredTimeZoneMapDST.end();it++) {
+	for (TimeZoneMapIterator it = m_preferredTimeZoneMapDST.begin();it != m_preferredTimeZoneMapDST.end();++it) {
 	PMLOG_TRACE("DST-MAP: preferred zone found: [%s] , offset = %d , dstSupport = %s",
 				it->second->name.c_str(),it->second->offsetToUTC,(it->second->dstSupported != 0 ? "TRUE" : "FALSE"));
 	}
-	for (TimeZoneMapIterator it = m_preferredTimeZoneMapNoDST.begin();it != m_preferredTimeZoneMapNoDST.end();it++) {
+	for (TimeZoneMapIterator it = m_preferredTimeZoneMapNoDST.begin();it != m_preferredTimeZoneMapNoDST.end();++it) {
 	PMLOG_TRACE("NON-DST-MAP: preferred zone found: [%s] , offset = %d , dstSupport = %s",
 						it->second->name.c_str(),it->second->offsetToUTC,(it->second->dstSupported != 0 ? "TRUE" : "FALSE"));
 	}
@@ -1734,7 +1620,9 @@ void TimePrefsHandler::setTimeZone(const TimeZoneInfo * pZoneInfo)
 
 	std::string tzFileActual = s_zoneInfoFolder + pZoneInfo->name;
 	PmLogWarning(sysServiceLogContext(), "TIMEZONE_DATA", 0, "Checking timezone data from %s ].",tzFileActual.c_str());
-	if (access(tzFileActual.c_str(), F_OK))
+	// Only picks the failsafe zone if the data is missing; nothing is opened
+	// on the strength of this check.
+	if (access(tzFileActual.c_str(), F_OK)) // Flawfinder: ignore
 	{
 		PmLogWarning(sysServiceLogContext(), "MISSING_TIMEZONE", 0, "Missing timezone data for [%s]. Failsafe activated! setting failsafe-default zone:[%s]",  pZoneInfo->name.c_str(),s_failsafeDefaultZone.name.c_str());
 		pZoneInfo = &s_failsafeDefaultZone;
@@ -1743,10 +1631,10 @@ void TimePrefsHandler::setTimeZone(const TimeZoneInfo * pZoneInfo)
 
 	m_cpCurrentTimeZone = pZoneInfo;
 	PrefsDb::instance()->setPref("timeZone",pZoneInfo->jsonStringValue);
-	systemSetTimeZone(tzFileActual, *pZoneInfo);
+	systemSetTimeZone(tzFileActual);
 }
 
-void TimePrefsHandler::systemSetTimeZone(const std::string &tzFileActual, const TimeZoneInfo &zoneInfo)
+void TimePrefsHandler::systemSetTimeZone(const std::string &tzFileActual) const
 {
 	// Do we have a timezone file in place? remove if yes
 	(void) unlink(s_tzFilePath);
@@ -1902,7 +1790,17 @@ void TimePrefsHandler::postSystemTimeChange()
 	PrefsFactory::instance()->postPrefChangeValueIsCompleteString("getSystemTime", json.stringify());
 }
 
-void TimePrefsHandler::attachSystemTime(JValue &json)
+std::string TimePrefsHandler::zoneAbbreviation(const struct tm& tm)
+{
+	char abbr[64];
+	// strftime returns 0, with the buffer contents unspecified, if the
+	// result does not fit
+	if (strftime(abbr, sizeof(abbr), "%Z", &tm) == 0)
+		return std::string();
+	return abbr;
+}
+
+void TimePrefsHandler::attachSystemTime(JValue &json) const
 {
 	time_t utctime = time(NULL);
 	struct tm localTm;
@@ -1929,9 +1827,7 @@ void TimePrefsHandler::attachSystemTime(JValue &json)
 	if (currentTimeZone()) {
 		json.put("timezone", currentTimeZone()->name);
 		//get current time zone abbreviation
-		char tzoneabbr_cstr[16];
-		strftime(tzoneabbr_cstr, 16,"%Z", &localTm);
-		json.put("TZ", tzoneabbr_cstr);
+		json.put("TZ", zoneAbbreviation(localTm));
 	}
 	else {
 		//default to something
@@ -2020,7 +1916,7 @@ std::string TimePrefsHandler::currentTimeZoneName() const
 	return m_cpCurrentTimeZone->name;
 }
 
-time_t TimePrefsHandler::offsetToUtcSecs() const
+time_t TimePrefsHandler::offsetToUtcSecs()
 {
 	// We retrieve current offset to UTC separately because Daylight Savings may be in
 	// effect and the offset will be different than the standard one
@@ -2105,7 +2001,7 @@ const TimeZoneInfo* TimePrefsHandler::timeZone_ZoneFromOffset(int offset,int dst
 {
 	if (mcc != 0) {
 
-		const TimeZoneInfo* tzMcc = timeZone_ZoneFromMCC(mcc, 0);
+		const TimeZoneInfo* tzMcc = timeZone_ZoneFromMCC(mcc);
 		if (tzMcc && !tzMcc->countryCode.empty()) {
 
 			PmLogDebug(sysServiceLogContext(),"MCC code: %d, Offset: %d, DstValue: %d, TZ Entry: %s", mcc, offset, dstValue,
@@ -2207,7 +2103,7 @@ const TimeZoneInfo* TimePrefsHandler::timeZone_GenericZoneFromOffset(int offset)
 	//scan the sys zones list
 	for (TimeZoneInfoListConstIterator 	it = m_syszoneList.begin();
 									it != m_syszoneList.end();
-									it++)
+									++it)
 	{
 		TimeZoneInfo * zc = *it;
 		if (zc->offsetToUTC == offset)
@@ -2216,7 +2112,7 @@ const TimeZoneInfo* TimePrefsHandler::timeZone_GenericZoneFromOffset(int offset)
 	return NULL;
 }
 
-const TimeZoneInfo* TimePrefsHandler::timeZone_ZoneFromMCC(int mcc,int mnc) const
+const TimeZoneInfo* TimePrefsHandler::timeZone_ZoneFromMCC(int mcc) const
 {
 	TimeZoneMapConstIterator it = m_mccZoneInfoMap.find(mcc);
 	if (it == m_mccZoneInfoMap.end())
@@ -2236,7 +2132,7 @@ const TimeZoneInfo* TimePrefsHandler::timeZone_ZoneFromName(const std::string& n
 	}
 	for (TimeZoneInfoList::const_iterator it = m_zoneList.begin(); it != m_zoneList.end(); ++it)
 	{
-		TimeZoneInfo* z = (TimeZoneInfo*) (*it);
+		TimeZoneInfo* z = *it;
 
 		if (z->name == name)
 		{
@@ -2253,7 +2149,7 @@ const TimeZoneInfo* TimePrefsHandler::timeZone_ZoneFromName(const std::string& n
 
 	for (TimeZoneInfoList::const_iterator it = m_syszoneList.begin();
 	it != m_syszoneList.end(); ++it) {
-		TimeZoneInfo* z = (TimeZoneInfo*) (*it);
+		TimeZoneInfo* z = *it;
 
 		if (z->name == name)
 			return z;
@@ -2262,30 +2158,7 @@ const TimeZoneInfo* TimePrefsHandler::timeZone_ZoneFromName(const std::string& n
 	return 0;
 }
 
-const TimeZoneInfo* TimePrefsHandler::timeZone_GetDefaultZoneFailsafe()
-{
-	//No matter what, return *a* zone...never null.
-	//order:  try the m_pDefaultTimeZone , then default zone from json, then finally the failsafe default hardcoded
-
-	const TimeZoneInfo * tz = NULL;
-
-	if (m_pDefaultTimeZone)
-	{
-		tz = timeZone_ZoneFromName(m_pDefaultTimeZone->name);
-		return tz;
-	}
-	else
-	{
-		tz= timeZone_ZoneFromName(tzNameFromJsonString(getDefaultTZFromJson()));
-	}
-
-	if (tz == NULL)
-		tz = &s_failsafeDefaultZone;
-
-	return tz;
-}
-
-bool TimePrefsHandler::isCountryAcrossMultipleTimeZones(const TimeZoneInfo& tzinfo) const
+bool TimePrefsHandler::isCountryAcrossMultipleTimeZones(const TimeZoneInfo& tzinfo)
 {
 	//placeholder fn in case this logic needs to get more complex
 	return ((tzinfo.howManyZonesForCountry) > 1);
@@ -2381,7 +2254,7 @@ bool TimePrefsHandler::cbSetSystemTime(LSHandle* lshandle, LSMessage *message,
 	pbnjson::JValue timestamp;
         std::string lastClockTag;
 
-	TimePrefsHandler* th = (TimePrefsHandler*) user_data;
+	TimePrefsHandler* th = static_cast<TimePrefsHandler*>(user_data);
 
 	PmLogInfo(sysServiceLogContext(), "SET_SYSTEM_TIME", 2,
 		PMLOGKS("SENDER", LSMessageGetSenderServiceName(message)),
@@ -2465,7 +2338,7 @@ Done_cbSetSystemTime:
 
 //static
 bool TimePrefsHandler::cbAlarmDActivityStatus(LSHandle* lshandle, LSMessage *message,
-							void *user_data)
+							void * /*user_data*/)
 {
 	EMPTY_SCHEMA_RETURN(lshandle, message);
 
@@ -2568,6 +2441,15 @@ Example response for a failed call:
 \endcode
 */
 //static
+namespace {
+	// A decimal field of a NITZ message; values beyond int are clamped.
+	int nitzIntField(const std::string &text)
+	{
+		long value = strtol(text.c_str(), nullptr, 10);
+		return static_cast<int>(std::max<long>(INT_MIN, std::min<long>(INT_MAX, value)));
+	}
+} // anonymous namespace
+
 bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *message, void * user_data)
 {
 	/*
@@ -2612,13 +2494,12 @@ bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *me
 	int dst = 0;
 	int mcc = 0;
 	int mnc = 0;
-	time_t remotetimeStamp = 0;
 	NitzParameters nitzParam;
 	int nitzFlags = 0;
 	std::string nitzFnMsg;
 	JValue label;
 
-	TimePrefsHandler* th = (TimePrefsHandler*)user_data;
+	TimePrefsHandler* th = static_cast<TimePrefsHandler*>(user_data);
 
 	const char* str = LSMessageGetPayload(message);
 	if( !str )
@@ -2639,55 +2520,55 @@ bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *me
 
 	label = root["sec"];
 	if (label.isString())
-		timeStruct.tm_sec = strtol(label.asString().c_str(), 0, 10);
+		timeStruct.tm_sec = nitzIntField(label.asString());
 	else
 		++rc;
 
 	label = root["min"];
 	if (label.isString())
-		timeStruct.tm_min = strtol(label.asString().c_str(), 0, 10);
+		timeStruct.tm_min = nitzIntField(label.asString());
 	else
 		++rc;
 
 	label = root["hour"];
 	if (label.isString())
-		timeStruct.tm_hour = strtol(label.asString().c_str(), 0, 10);
+		timeStruct.tm_hour = nitzIntField(label.asString());
 	else
 		++rc;
 
 	label = root["mday"];
 	if (label.isString())
-		timeStruct.tm_mday = strtol(label.asString().c_str(), 0, 10);
+		timeStruct.tm_mday = nitzIntField(label.asString());
 	else
 		++rc;
 
 	label = root["mon"];
 	if (label.isString())
-		timeStruct.tm_mon = strtol(label.asString().c_str(), 0, 10);
+		timeStruct.tm_mon = nitzIntField(label.asString());
 	else
 		++rc;
 
 	label = root["year"];
 	if (label.isString())
-		timeStruct.tm_year = strtol(label.asString().c_str(), 0, 10);
+		timeStruct.tm_year = nitzIntField(label.asString());
 	else
 		++rc;
 
 	label = root["offset"];
 	if (label.isString())
-		utcOffset = strtol(label.asString().c_str(), 0, 10);
+		utcOffset = nitzIntField(label.asString());
 	else
 		utcOffset = -1000;					// this is an invalid value so it can be detected later on
 
 	label = root["mcc"];
 	if (label.isString())
-		mcc = strtol(label.asString().c_str(), 0, 10);
+		mcc = nitzIntField(label.asString());
 	else
 		mcc = 0;
 
 	label = root["mnc"];
 	if (label.isString())
-		mnc = strtol(label.asString().c_str(), 0, 10);
+		mnc = nitzIntField(label.asString());
 	else
 		mnc = 0;
 
@@ -2717,12 +2598,8 @@ bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *me
 	if (utcOffset == -1000)
 		tzValid = false;
 
-	//check to see if there is a valid timestamp
-	label = root["timestamp"];
-	if (label.isString())
-		remotetimeStamp = strtoul(label.asString().c_str(), 0, 10);
-	else
-		remotetimeStamp = 0;			//...I suppose this can be valid in some cases...like for "threshold" seconds when the time() clock rolls over [not a big deal]
+	// "timestamp" is not used: the parameters are stamped with the local
+	// receipt time instead
 
 	label = root["tilIgnore"];
 	if (label.isBoolean())
@@ -2732,7 +2609,7 @@ bool TimePrefsHandler::cbSetSystemNetworkTime(LSHandle * lshandle, LSMessage *me
 	}
 
 	nitzParam = NitzParameters(timeStruct, utcOffset, dst, mcc, mnc, timeValid,
-							   tzValid, dstValid, remotetimeStamp); //wasteful copy but this fn isn't called much
+							   tzValid, dstValid); //wasteful copy but this fn isn't called much
 
 	//run the nitz chain
 	if (th->nitzHandlerEntry(nitzParam,nitzFlags,nitzFnMsg) != NITZHANDLER_RETURN_SUCCESS)
@@ -2794,14 +2671,8 @@ Done_cbSetSystemNetworkTime:
 	return true;
 }
 
-int  TimePrefsHandler::nitzHandlerEntry(NitzParameters& nitz,int& flags,std::string& r_statusMsg)
+int  TimePrefsHandler::nitzHandlerEntry(NitzParameters& /*nitz*/,int& flags,std::string& /*r_statusMsg*/)
 {
-	//check the validity of the received nitz message
-	if (nitz.valid() == false)
-	{
-		r_statusMsg = "timestamps are too far apart";
-		return NITZHANDLER_RETURN_ERROR;
-	}
 	//set up the flags
 	if (PrefsDb::instance()->getPref("timeZonesUseGenericExclusively") == "true")
 		flags |= NITZHANDLER_FLAGBIT_GZONEFORCE;
@@ -2815,7 +2686,7 @@ int  TimePrefsHandler::nitzHandlerEntry(NitzParameters& nitz,int& flags,std::str
 	return NITZHANDLER_RETURN_SUCCESS;
 }
 
-int  TimePrefsHandler::nitzHandlerTimeValue(NitzParameters& nitz, int& flags, std::string& r_statusMsg)
+int  TimePrefsHandler::nitzHandlerTimeValue(NitzParameters& nitz, const int& flags, std::string& /*r_statusMsg*/)
 {
 
 	if (isNITZTimeEnabled() == false)
@@ -2853,12 +2724,12 @@ int  TimePrefsHandler::nitzHandlerTimeValue(NitzParameters& nitz, int& flags, st
 
 }
 
-int	 TimePrefsHandler::nitzHandlerOffsetValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg)
+int	 TimePrefsHandler::nitzHandlerOffsetValue(NitzParameters& nitz,int& flags,std::string& /*r_statusMsg*/)
 {
 	if (isNITZTZEnabled() == false)
 		return NITZHANDLER_RETURN_SUCCESS;
 
-	nitzHandlerSpecialCaseOffsetValue(nitz,flags,r_statusMsg);
+	nitzHandlerSpecialCaseOffsetValue(nitz);
 
 	if (nitz._tzvalid == false)
 		return NITZHANDLER_RETURN_SUCCESS;			///this is not a message with a tz offset value...return (not an error)
@@ -2901,7 +2772,7 @@ int	 TimePrefsHandler::nitzHandlerOffsetValue(NitzParameters& nitz,int& flags,st
 	return NITZHANDLER_RETURN_SUCCESS;
 }
 
-int  TimePrefsHandler::nitzHandlerDstValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg)
+int  TimePrefsHandler::nitzHandlerDstValue(NitzParameters& /*nitz*/,int& /*flags*/,std::string& /*r_statusMsg*/)
 {
 
 	// enforcing rules for dst according to some test cases that need to be passed with explicit assumptions on dstvalid <-> dst=x implications. Therefore
@@ -2943,13 +2814,13 @@ int  TimePrefsHandler::nitzHandlerDstValue(NitzParameters& nitz,int& flags,std::
 	return NITZHANDLER_RETURN_SUCCESS;
 }
 
-int  TimePrefsHandler::nitzHandlerExit(NitzParameters& nitz,int& flags,std::string& r_statusMsg)
+int  TimePrefsHandler::nitzHandlerExit(NitzParameters& /*nitz*/,int& /*flags*/,std::string& /*r_statusMsg*/)
 {
 	//nothing special to do here at this time...just a hook to allow future post-process
 	return NITZHANDLER_RETURN_SUCCESS;
 }
 
-void  TimePrefsHandler::nitzHandlerSpecialCaseOffsetValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg)
+void  TimePrefsHandler::nitzHandlerSpecialCaseOffsetValue(NitzParameters& nitz)
 {
 	//Special Case #1:  If the MCC is France (208), and the offset value is 120, then flip that to offset 60, tzvalid=true, dst=1, dstvalid=true
 	if ((nitz._mcc == 208) && (nitz._offset == 120))
@@ -3060,12 +2931,11 @@ Done_timeoutFunc:
 	else
 	{
 		bool totallyGoodNitz = (nitzParam._timevalid) && (nitzParam._tzvalid) && (nitzParam._dstvalid);
-		time_t dbg_time_outp = time(NULL);
-		PmLogDebug(sysServiceLogContext(),"NITZ FINAL: At least something was ok (timevalid = %s,tzvalid = %s,dstvalid = %s), time is now %s",
+		PmLogDebug(sysServiceLogContext(),"NITZ FINAL: At least something was ok (timevalid = %s,tzvalid = %s,dstvalid = %s), time is now %lld",
 			(nitzParam._timevalid ? "true" : "false"),
 				(nitzParam._tzvalid ? "true" : "false"),
 				(nitzParam._dstvalid ? "true" : "false"),
-				(ctime(&dbg_time_outp)));
+				static_cast<long long>(time(NULL)));
 
 		//yes...at least something was ok
 		//set the right overall validity flags (for tracking UI), post the timechange, and launch apps
@@ -3167,7 +3037,7 @@ inline void TimePrefsHandler::tzTransTimerAnew(time_t timeout)
 	tzTransTimer(timeout);
 }
 
-gboolean TimePrefsHandler::tzTrans(gpointer userData)
+gboolean TimePrefsHandler::tzTrans(gpointer /*userData*/)
 {
 	TimePrefsHandler* inst = TimePrefsHandler::instance();
 
@@ -3284,7 +3154,7 @@ void TimePrefsHandler::timeout_destroy(gpointer userData)
 	m_gsource_periodic = NULL;
 }
 
-int  TimePrefsHandler::timeoutNitzHandlerEntry(NitzParameters& nitz,int& flags,std::string& r_statusMgs)
+int  TimePrefsHandler::timeoutNitzHandlerEntry(NitzParameters& nitz,int& flags,std::string& /*r_statusMsg*/) const
 {
 	//if a previous message was valid, use the flags from the previous message.
 	if (m_p_lastNitzParameter)
@@ -3308,7 +3178,7 @@ int  TimePrefsHandler::timeoutNitzHandlerEntry(NitzParameters& nitz,int& flags,s
 	return NITZHANDLER_RETURN_SUCCESS;
 }
 
-int  TimePrefsHandler::timeoutNitzHandlerTimeValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg)
+int  TimePrefsHandler::timeoutNitzHandlerTimeValue(const NitzParameters& nitz,const int& flags,std::string& /*r_statusMsg*/)
 {
 	/*
 	 * Even though NTP was attempted in the original handler when the NITZ message came in, if that was unsuccessful (which means _timevalid is still == false),
@@ -3337,7 +3207,7 @@ int  TimePrefsHandler::timeoutNitzHandlerTimeValue(NitzParameters& nitz,int& fla
 
 }
 
-int	 TimePrefsHandler::timeoutNitzHandlerOffsetValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg)
+int	 TimePrefsHandler::timeoutNitzHandlerOffsetValue(NitzParameters& nitz,const int& flags,std::string& /*r_statusMsg*/)
 {
 	//if automatic timezone is not allowed, then just exit
 	if (isNITZTZEnabled() == false)
@@ -3353,7 +3223,7 @@ int	 TimePrefsHandler::timeoutNitzHandlerOffsetValue(NitzParameters& nitz,int& f
 	if ( flags & NITZHANDLER_FLAGBIT_MCCALLOW )
 	{
 		//try and pick a zone by MCC
-		tz = timeZone_ZoneFromMCC(nitz._mcc,nitz._mnc);
+		tz = timeZone_ZoneFromMCC(nitz._mcc);
 		if (tz)
 		{
 			//found one!  ...set it...but first, see if the "name" is set. If not, reselect based on the offset and dst (not all MCC table zones have names)
@@ -3382,7 +3252,7 @@ int	 TimePrefsHandler::timeoutNitzHandlerOffsetValue(NitzParameters& nitz,int& f
 	return NITZHANDLER_RETURN_SUCCESS;
 }
 
-int  TimePrefsHandler::timeoutNitzHandlerDstValue(NitzParameters& nitz,int& flags,std::string& r_statusMsg)
+int  TimePrefsHandler::timeoutNitzHandlerDstValue(NitzParameters& nitz,const int& flags,std::string& /*r_statusMsg*/)
 {
 	//nothing to do here...dst can't really be helped if it didn't come in initially
 
@@ -3397,7 +3267,7 @@ int  TimePrefsHandler::timeoutNitzHandlerDstValue(NitzParameters& nitz,int& flag
 	return NITZHANDLER_RETURN_SUCCESS;
 }
 
-int  TimePrefsHandler::timeoutNitzHandlerExit(NitzParameters& nitz,int& flags,std::string& r_statusMsg)
+int  TimePrefsHandler::timeoutNitzHandlerExit(NitzParameters& /*nitz*/,int& /*flags*/,std::string& /*r_statusMsg*/)
 {
 	return NITZHANDLER_RETURN_SUCCESS;
 }
@@ -3610,7 +3480,7 @@ bool TimePrefsHandler::cbSetTimeWithNTP(LSHandle* lsHandle, LSMessage *message,
 
 	PmLogDebug(sysServiceLogContext(), "received message %s", parser.getPayload());
 
-	TimePrefsHandler* th = (TimePrefsHandler*) user_data;
+	TimePrefsHandler* th = static_cast<TimePrefsHandler*>(user_data);
 
 	// category associated with this callback should be registered correctly
 	assert( th );
@@ -3637,7 +3507,7 @@ bool TimePrefsHandler::cbSetTimeWithNTP(LSHandle* lsHandle, LSMessage *message,
 }
 
 //static
-bool TimePrefsHandler::cbSetPeriodicWakeupAlarmDResponse(LSHandle* lsHandle, LSMessage *message,
+bool TimePrefsHandler::cbSetPeriodicWakeupAlarmDResponse(LSHandle* /*lsHandle*/, LSMessage *message,
 							void *user_data)
 {
 	const char* str = LSMessageGetPayload(message);
@@ -3664,14 +3534,14 @@ bool TimePrefsHandler::cbSetPeriodicWakeupAlarmDResponse(LSHandle* lsHandle, LSM
 
 	PmLogDebug(sysServiceLogContext(), "received message %s", str);
 
-	TimePrefsHandler* th = (TimePrefsHandler*) user_data;
+	TimePrefsHandler* th = static_cast<TimePrefsHandler*>(user_data);
 
 	// call associated with this callback should be sent correctly
 	assert( th );
 
-	bool returnValue;
-	bool getOk = parser.get("returnValue", returnValue);
-	assert( getOk ); // schema validation should ensure type and presence
+	bool returnValue = false;
+	if (!parser.get("returnValue", returnValue))
+		return false; // not reached: schema validation ensures type and presence
 
 	if (!returnValue)
 	{
@@ -3691,7 +3561,7 @@ bool TimePrefsHandler::cbSetPeriodicWakeupAlarmDResponse(LSHandle* lsHandle, LSM
 bool TimePrefsHandler::cbServiceStateTracker(LSHandle* lsHandle, LSMessage *message,
 											 void *user_data)
 {
-	TimePrefsHandler * th = (TimePrefsHandler *)user_data;
+	TimePrefsHandler * th = static_cast<TimePrefsHandler*>(user_data);
 
 	if (th == NULL)
 	{
@@ -3808,14 +3678,14 @@ Example response:
 */
 //static
 bool TimePrefsHandler::cbGetSystemTime(LSHandle* lsHandle, LSMessage *message,
-									   void *user_data)
+									   void *user_data) // cppcheck-suppress constParameterCallback ; LSMethodFunction takes void*
 {
 	LSMessageJsonParser parser(message, STRICT_SCHEMA(PROPS_1(PROPERTY(subscribe, boolean))));
 	if (!parser.parse(__FUNCTION__,lsHandle, EValidateAndErrorAlways))
         {
             return true;
         }
-	TimePrefsHandler* th = (TimePrefsHandler*) user_data;
+	const TimePrefsHandler* th = static_cast<const TimePrefsHandler*>(user_data);
 	JObject reply;
 
 	do {
@@ -3847,7 +3717,7 @@ bool TimePrefsHandler::cbGetSystemTime(LSHandle* lsHandle, LSMessage *message,
 		PmLogWarning(sysServiceLogContext(), "BUS_REPLY_FAIL", 0, "bus reply fails UTF-8 validity check! [%s]",  reply.stringify().c_str());
 	}
 
-	std::cerr << "Result: " << reply.stringify().c_str() << std::endl;
+	std::cerr << "Result: " << reply.stringify().c_str() << '\n';
 	LS::Error error;
 	(void) LSMessageReply(lsHandle, message, reply.stringify().c_str(), error);
 
@@ -3976,9 +3846,8 @@ Example response for a failed call:
 */
 //static
 bool TimePrefsHandler::cbSetTimeChangeLaunch(LSHandle* lsHandle, LSMessage *message,
-											 void *user_data)
+											 void * /*user_data*/)
 {
-	bool retVal;
 	JValue tmpJson_listArray;
 	JValue storedJson_listObject;
 
@@ -4091,7 +3960,7 @@ Remove:
 Store:
 	//store the pref back, in string form
 	rawCurrentPref = storedJson.stringify();
-	PrefsDb::instance()->setPref("timeChangeLaunch",rawCurrentPref.c_str());
+	PrefsDb::instance()->setPref("timeChangeLaunch",rawCurrentPref);
 
 Done:
 	JObject jsonOutput {{"subscribed", false}};	//no subscriptions on this; make that explicit!
@@ -4104,7 +3973,7 @@ Done:
 		jsonOutput.put("returnValue", true);
 
 	LS::Error error;
-	retVal = LSMessageReply(lsHandle, message, jsonOutput.stringify().c_str(), error);
+	(void) LSMessageReply(lsHandle, message, jsonOutput.stringify().c_str(), error);
 
 	return true;
 }
@@ -4153,7 +4022,7 @@ Example response for a succesful call:
 }
 \endcode
 */
-bool TimePrefsHandler::cbGetNTPTime(LSHandle* lsHandle, LSMessage *message,
+bool TimePrefsHandler::cbGetNTPTime(LSHandle* /*lsHandle*/, LSMessage *message,
 							void *user_data)
 {
 	TimePrefsHandler *th = static_cast<TimePrefsHandler*>(user_data);
@@ -4251,100 +4120,104 @@ Example response for a failed call:
 }
 \endcode
 */
-bool TimePrefsHandler::cbConvertDate(LSHandle* pHandle, LSMessage* pMessage, void*)
+bool TimePrefsHandler::convertDate(const std::string& date, const std::string& sourceTz,
+                                   const std::string& destTz, std::string& result,
+                                   std::string& errorText)
 {
-	Utils::gstring status {nullptr};
-	Utils::gstring error_text {nullptr};
-	bool ret = false;
+	// strptime only fills the fields it parses; clear the rest and let
+	// mktime figure out whether DST applies
 	struct tm local_tm;
-	char * bad_char = NULL;
+	memset(&local_tm, 0, sizeof(local_tm));
+	local_tm.tm_isdst = -1;
 
+	const char* bad_char = strptime(date.c_str(), "%Y-%m-%d %H:%M:%S", &local_tm);
+	if (NULL == bad_char) {
+		errorText = "unrecognized date format: '" + date + "'";
+		return false;
+	} else if (*bad_char != '\0') {
+		errorText = "unrecognized characters in date: '" + date + "'";
+		return false;
+	}
+
+	if (!tz_exists(sourceTz.c_str())) {
+		errorText = "timezone not found: '" + sourceTz + "'";
+		return false;
+	}
+
+	if (!tz_exists(destTz.c_str())) {
+		errorText = "timezone not found: '" + destTz + "'";
+		return false;
+	}
+
+	// remember the process timezone; the conversion below changes TZ and
+	// every other localtime()/mktime() user in this service depends on it
+	// Flawfinder: ignore - only put back as it was
+	const char* cpSavedTz = getenv("TZ"); // NOLINT(concurrency-mt-unsafe) single-threaded daemon
+	const bool hadTz = (cpSavedTz != nullptr);
+	const std::string savedTz = hadTz ? cpSavedTz : "";
+
+	// interpret the parsed wall-clock time in the source zone...
+	set_tz(sourceTz.c_str());
+
+	time_t local_time = mktime(&local_tm);
+	PmLogDebug(sysServiceLogContext(),"0 date='%s' local_time=%lld timezone=%ld", date.c_str(),
+		   (long long) local_time, timezone);
+
+	// ...and render it in the destination zone
+	set_tz(destTz.c_str());
+
+	// ctime adds '\n' to the end of the result, so we need a little workaround
+	char buf[64]; // ctime_r needs 26
+	// the reply's format is ctime()'s, in the C locale whatever LC_TIME says
+	// cppcheck-suppress ctime_rCalled
+	const char* str = ctime_r(&local_time, buf);
+	std::string str_time = str ? str : "\n";
+	str_time.pop_back();
+	PmLogDebug(sysServiceLogContext(),"1 date='%s' ctime='%s' local_time=%lld timezone=%ld", date.c_str(), str_time.c_str(),
+		   (long long) local_time, timezone);
+
+	// put the process timezone back the way we found it, set or unset
+	if (hadTz) {
+		set_tz(savedTz.c_str());
+	} else {
+		unsetenv("TZ"); // NOLINT(concurrency-mt-unsafe) single-threaded daemon
+		tzset();
+	}
+
+	result = str_time;
+	return true;
+}
+
+bool TimePrefsHandler::cbConvertDate(LSHandle* lsHandle, LSMessage* message, void*)
+{
 	// {"date": string, "source_tz": string, "dest_tz": string}
-	LSMessageJsonParser parser(pMessage, STRICT_SCHEMA(PROPS_3(PROPERTY(date, string),
+	LSMessageJsonParser parser(message, STRICT_SCHEMA(PROPS_3(PROPERTY(date, string),
 															  PROPERTY(source_tz, string),
 															  PROPERTY(dest_tz, string))
 													  REQUIRED_3(date, source_tz, dest_tz)));
 
-	if (!parser.parse(__FUNCTION__, pHandle, EValidateAndErrorAlways))
+	if (!parser.parse(__FUNCTION__, lsHandle, EValidateAndErrorAlways))
 		return true;
 
 	JValue root = parser.get();
+	std::string date = root["date"].asString();
+	std::string source_tz = root["source_tz"].asString();
+	std::string dest_tz = root["dest_tz"].asString();
 
-	// remember the process timezone; the conversion below changes TZ and
-	// every other localtime()/mktime() user in this service depends on it
-	const char* cpSavedTz = getenv("TZ");
-	std::string savedTz = cpSavedTz ? cpSavedTz : "";
+	PmLogDebug(sysServiceLogContext(),"%s: converting %s from %s to %s", __func__, date.c_str(), source_tz.c_str(), dest_tz.c_str());
 
-	do
-	{
-
-		std::string date = root["date"].asString();
-		std::string source_tz = root["source_tz"].asString();
-		std::string dest_tz = root["dest_tz"].asString();
-
-		PmLogDebug(sysServiceLogContext(),"%s: converting %s from %s to %s", __func__, date.c_str(), source_tz.c_str(), dest_tz.c_str());
-
-		// strptime only fills the fields it parses; clear the rest and let
-		// mktime figure out whether DST applies
-		memset(&local_tm, 0, sizeof(local_tm));
-		local_tm.tm_isdst = -1;
-
-		bad_char = (char *) strptime(date.c_str(), "%Y-%m-%d %H:%M:%S", &local_tm);
-		if (NULL == bad_char) {
-			error_text = g_strdup_printf("unrecognized date format: '%s'", date.c_str());
-			break;
-		} else if (*bad_char != '\0') {
-			error_text = g_strdup_printf("unrecognized characters in date: '%s'", date.c_str());
-			break;
-		}
-
-		if (!tz_exists(source_tz.c_str())) {
-			error_text = g_strdup_printf("timezone not found: '%s'", source_tz.c_str());
-			break;
-		}
-
-		if (!tz_exists(dest_tz.c_str())) {
-			error_text = g_strdup_printf("timezone not found: '%s'", dest_tz.c_str());
-			break;
-		}
-
-		// interpret the parsed wall-clock time in the source zone...
-		set_tz(source_tz.c_str());
-
-		time_t local_time;
-		local_time = mktime(&local_tm);
-		PmLogDebug(sysServiceLogContext(),"0 date='%s' local_time=%lld timezone=%ld", date.c_str(),
-			   (long long) local_time, timezone);
-
-		// ...and render it in the destination zone
-		set_tz(dest_tz.c_str());
-
-		// ctime adds '\n' to the end of the result, so we need a little workaround
-		char *localtime = ctime(&local_time);
-		std::string str_time = localtime ? localtime : "\n";
-		str_time.pop_back();
-		PmLogDebug(sysServiceLogContext(),"1 date='%s' ctime='%s' local_time=%lld timezone=%ld", date.c_str(), str_time.c_str(),
-			   (long long) local_time, timezone);
-
-		const std::string statusStr = JObject {{"returnValue", true}, {"date", str_time}}.stringify();
-		status = g_strdup(statusStr.c_str());
-	}
-	while (false);
-
-	// put the process timezone back the way we found it
-	if (!savedTz.empty())
-		set_tz(savedTz.c_str());
-
-	if (status.get() == nullptr) {
-		g_assert(error_text.get() != nullptr);
-		const std::string statusStr = JObject {{"returnValue", false},
-											   {"errorText", error_text.get()}}.stringify();
-		status = g_strdup(statusStr.c_str());
-		PmLogWarning(sysServiceLogContext(), "ERROR_MESSAGE", 0, "error: %s", error_text.get());
+	std::string converted;
+	std::string errorText;
+	JObject reply;
+	if (convertDate(date, source_tz, dest_tz, converted, errorText)) {
+		reply = JObject {{"returnValue", true}, {"date", converted}};
+	} else {
+		reply = JObject {{"returnValue", false}, {"errorText", errorText}};
+		PmLogWarning(sysServiceLogContext(), "ERROR_MESSAGE", 0, "error: %s", errorText.c_str());
 	}
 
 	LS::Error error;
-	ret = LSMessageReply(pHandle, pMessage, status.get(), error);
+	bool ret = LSMessageReply(lsHandle, message, reply.stringify().c_str(), error);
 	if (!ret)
 	{
 		LSREPORT(*error.get());
@@ -4422,7 +4295,7 @@ bool TimePrefsHandler::getSystemUptime(LSHandle* pHandle, LSMessage* message, vo
 		int errno_back = errno;
 		reply.put("errorCode", errno_back);
 		reply.put("returnValue", false);
-		reply.put("errorText", strerror(errno_back));
+		reply.put("errorText", g_strerror(errno_back));
 	}
 
 	LS::Error error;
@@ -4433,7 +4306,7 @@ bool TimePrefsHandler::getSystemUptime(LSHandle* pHandle, LSMessage* message, vo
 }
 
 //static
-gboolean TimePrefsHandler::source_periodic(gpointer userData)
+gboolean TimePrefsHandler::source_periodic(gpointer /*userData*/)
 {
 	if (TimePrefsHandler::s_inst == NULL)
 	{
@@ -4469,14 +4342,16 @@ void TimePrefsHandler::source_periodic_destroy(gpointer userData)
 	TimePrefsHandler::s_inst->timeout_destroy(userData);
 }
 
-void TimePrefsHandler::updateTimeZoneEnv()
+void TimePrefsHandler::updateTimeZoneEnv() const
 {
 	const char* tzName = (m_cpCurrentTimeZone->name).c_str();
 
 	__qMessage("Setting Time Zone: %s, utc Offset: %d",
 			tzName, m_cpCurrentTimeZone->offsetToUTC);
 	tzsetWorkaround(tzName);
-	__qMessage("TZ env is now [%s]", getenv("TZ"));
+	// Flawfinder: ignore - logged only
+	const char* tz = getenv("TZ"); // NOLINT(concurrency-mt-unsafe) single-threaded daemon
+	__qMessage("TZ env is now [%s]", tz ? tz : "(unset)");
 }
 
 /*!
@@ -4530,7 +4405,7 @@ bool TimePrefsHandler::cbLaunchTimeChangeApps(LSHandle* lsHandle, LSMessage *mes
 {
 	EMPTY_SCHEMA_RETURN(lsHandle, message);
 
-	TimePrefsHandler * th = (TimePrefsHandler *)user_data;
+	TimePrefsHandler * th = static_cast<TimePrefsHandler*>(user_data);
 	if (th == NULL)
 		return false;
 
@@ -4549,9 +4424,10 @@ bool TimePrefsHandler::cbLaunchTimeChangeApps(LSHandle* lsHandle, LSMessage *mes
 //necessary because tzset() apparently doesn't re-set if the path to a timezone file is the same as the old path that was set)
 static void tzsetWorkaround(const char * newTZ) {
 
-	setenv("TZ","",1);
+	// single-threaded daemon
+	setenv("TZ","",1); // NOLINT(concurrency-mt-unsafe)
 	tzset();
-	setenv("TZ",newTZ, 1);
+	setenv("TZ",newTZ, 1); // NOLINT(concurrency-mt-unsafe)
 	tzset();
 }
 
@@ -4590,16 +4466,16 @@ void TimePrefsHandler::slotNetworkConnectionStateChanged(bool connected)
 		timev = 86399; //24 hour default (23h.59m.59s actually)
 
 	time_t currTime = currentStamp();
-	PmLogDebug(sysServiceLogContext(),"currTime: %d, lastNtpUpdate: %d, interval: %d",
-		   (int)currTime, (int)m_lastNtpUpdate, timev);
-	if ((m_lastNtpUpdate > 0) && (time_t)(m_lastNtpUpdate + timev) > currTime)
+	PmLogDebug(sysServiceLogContext(),"currTime: %lld, lastNtpUpdate: %lld, interval: %u",
+		   static_cast<long long>(currTime), static_cast<long long>(m_lastNtpUpdate), timev);
+	if ((m_lastNtpUpdate > 0) && static_cast<time_t>(m_lastNtpUpdate + timev) > currTime)
 		return;
 
 	PMLOG_TRACE("startBootstrapCycle");
 	startBootstrapCycle(0);
 }
 
-bool TimePrefsHandler::cbTelephonyPlatformQuery(LSHandle* lsHandle, LSMessage *message,
+bool TimePrefsHandler::cbTelephonyPlatformQuery(LSHandle* /*lsHandle*/, LSMessage *message,
 												void *userData)
 {
 	// {"extended": string, "capabilities": string, "hfenable": boolean}
@@ -4622,7 +4498,7 @@ bool TimePrefsHandler::cbTelephonyPlatformQuery(LSHandle* lsHandle, LSMessage *m
 
 		bool timeZoneAvailable = label.asBool();
 
-		TimePrefsHandler* th = (TimePrefsHandler*) userData;
+		TimePrefsHandler* th = static_cast<TimePrefsHandler*>(userData);
 		th->m_nitzTimeZoneAvailable = timeZoneAvailable;
 
 		PmLogDebug(sysServiceLogContext(),"NITZ Time Zone Available: %d", timeZoneAvailable);
@@ -4632,22 +4508,22 @@ bool TimePrefsHandler::cbTelephonyPlatformQuery(LSHandle* lsHandle, LSMessage *m
 	return isSuccess;
 }
 
-void TimePrefsHandler::updateDriftPeriod(const std::string hrValue)
+void TimePrefsHandler::updateDriftPeriod(const std::string& hrValue)
 {
 	char* endptr = 0;
 	long int val = strtol(hrValue.c_str(), &endptr, 10);
-	if ( (*endptr != 0) || val < -1 || val > (24*30) /* Max 1 month is enough */)
+	if ( (*endptr != 0) || val < -1 || val > 24L * 30 /* Max 1 month is enough */)
 	{
 		PmLogInfo(sysServiceLogContext(), "INVALID_SYNC_PERIOD", 2,
 				PMLOGKS("user", hrValue.c_str()),
 				PMLOGKFV("default", "%ld", static_cast<long int>(m_driftPeriodDefault)),
 				"Invalid time synchronization period. Default is used");
 
-		m_driftPeriod = (time_t)m_driftPeriodDefault;
+		m_driftPeriod = m_driftPeriodDefault;
 	}
 	else
 	{
-		m_driftPeriod = (time_t)(val < 0 ? m_driftPeriodDisabled : (val*60*60));
+		m_driftPeriod = val < 0 ? m_driftPeriodDisabled : static_cast<time_t>(val) * 60 * 60;
 	}
 }
 
@@ -4794,7 +4670,7 @@ bool TimePrefsHandler::cbTimeZoneByLocale(LSHandle* lsHandle, LSMessage *message
 	std::string reply(""), locale("");
 
 	do {
-		TimePrefsHandler* th = (TimePrefsHandler*)user_data;
+		TimePrefsHandler* th = static_cast<TimePrefsHandler*>(user_data);
 
 		const char* payload = LSMessageGetPayload(message);
 		if (!payload) break;
@@ -4895,13 +4771,14 @@ void TimePrefsHandler::handleNotAvailableSource(const std::string& source)
 
 int TimePrefsHandler::enableNetworkTimeSync(bool enable)
 {
-        gchar* argv[] = {(gchar*) "timedatectl", (gchar*) "set-ntp",
-                         (gchar*) (enable ? "true" : "false"), NULL};
+        // g_spawn takes gchar** but does not modify the strings
+        gchar* argv[] = {const_cast<gchar*>("timedatectl"), const_cast<gchar*>("set-ntp"),
+                         const_cast<gchar*>(enable ? "true" : "false"), NULL};
         gint status = 0;
 
         // no shell needed for a fixed argv, and the result is meaningful
         if (!g_spawn_sync(NULL, argv, NULL,
-                          (GSpawnFlags)(G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL),
+                          static_cast<GSpawnFlags>(G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL),
                           NULL, NULL, NULL, NULL, &status, NULL))
                 return -1;
 
