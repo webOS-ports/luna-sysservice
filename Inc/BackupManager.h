@@ -17,6 +17,7 @@
 #ifndef BACKUP_MANAGER_H
 #define BACKUP_MANAGER_H
 
+#include <functional>
 #include <list>
 #include <string>
 #include <memory>
@@ -37,6 +38,27 @@ public:
 	void turnOffBackup() { m_doBackupFiles = false; }
 	void turnOnBackup() { m_doBackupFiles = true; }
 	bool isBackupOn() const { return m_doBackupFiles; }
+
+	/// The keys a backup holds: the strings in the json array in
+	/// keylistFile (other entries are skipped). false, with keys empty, when
+	/// the file is missing or does not hold an array.
+	static bool readBackupKeylist(const std::string& keylistFile, std::list<std::string>& keys);
+
+	/// The backup database a postRestore "files" entry names, as a real path
+	/// under tempDir, or "" when the entry is not one to restore from: its
+	/// name is not exactly the backup db's, it has a ".." or a NUL, it is
+	/// not under tempDir once resolved, or it is not a regular file (a
+	/// symlink is refused). A relative entry is taken relative to tempDir.
+	static std::string backupDbPath(const std::string& tempDir, const std::string& entry);
+
+	/// Restores into target the keys listed in keylistFile - the same list
+	/// preBackup copies - from the backup database at backupDb. Nothing is
+	/// restored when the list cannot be read. Returns the number of keys
+	/// restored, or -1 when the list or the database cannot be read.
+	static int restoreFromBackupDb(PrefsDb& target, const std::string& backupDb,
+	                               const std::string& keylistFile,
+	                               const std::function<bool(const std::string&, const std::string&)>& accept =
+	                                   std::function<bool(const std::string&, const std::string&)>());
 
 private:
 	BackupManager();

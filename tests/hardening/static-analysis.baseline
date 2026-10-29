@@ -10,6 +10,9 @@
 ## Flagged inside libstdc++'s std::string move constructor, reached from std::operator+; no pointer of ours is NULL there.
 gcc -fanalyzer -O0	warning	Src/Settings.cpp	-Wanalyzer-null-argument	use of NULL where non-null expected [CWE-476]
 
+## gcc -fanalyzer at the raised budget reports the buffer of backupDbPath()'s local std::string 'path' as leaked at the closing brace. It is a std::string on the stack, freed by its destructor on every return; the unit tests run each return path of backupDbPath() under LeakSanitizer (asan-gcc, asan-clang) and valgrind, which report no leak.
+gcc -fanalyzer -O0	warning	Src/BackupManager.cpp	-Wanalyzer-malloc-leak	leak of 'path.std::__cxx11::basic_string<char>::_M_dataplus.std::__cxx11::basic_string<char>::_Alloc_hider::_M_p' [CWE-401]
+
 ## Reported at the fopen() itself, the point where the analysis of that path stopped at its budget: the FILE is closed on every return (fclose() in createManualTimeZone, the FilePtr unique_ptr in parseTimeZone).
 gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-file-leak	leak of FILE 'fopen(usrDefinedTZFilePath, "wb")' [CWE-775]
 gcc -fanalyzer -O2	warning	Src/TimeZoneService.cpp	-Wanalyzer-file-leak	leak of FILE 'fopen(usrDefinedTZFilePath, "wb")' [CWE-775]
@@ -22,6 +25,8 @@ gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-malloc-leak	leak of 'fope
 
 ## gcc -fanalyzer reads '<unknown>' bytes inside libstdc++ (std::string's small-string buffer, a std::string/std::vector/JValue return slot) that it does not model as initialised. No variable of ours is read uninitialised on these paths, and clang's analyzer reports nothing on them.
 gcc -fanalyzer -O0	warning	Inc/JSONUtils.h	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O0	warning	Src/BackupManager.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
+gcc -fanalyzer -O0	warning	Src/BackupManager.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
 gcc -fanalyzer -O0	warning	Src/JSONUtils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
 gcc -fanalyzer -O0	warning	Src/JSONUtils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
 gcc -fanalyzer -O0	warning	Src/JSONUtils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
@@ -41,7 +46,7 @@ gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-use-of-uninitialized-valu
 gcc -fanalyzer -O2	warning	Src/Utils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
 gcc -fanalyzer -O2	warning	Src/Utils.cpp	-Wanalyzer-use-of-uninitialized-value	use of uninitialized value '<unknown>' [CWE-457]
 
-## gcc -fanalyzer stopped at its budget: for some paths of the file (the record at line 0), or at the program point named. These are not defect reports; what was analysed is clean. A raised budget (see analyzer-budget) was tried for every file in Src/ (TimePrefsHandler.cpp at -O0 only) and did not help for these: the analyzer still stopped early, ran past the time or memory cap, or GCC 15.3 crashed at -O2. Of the test sources, test_json and test_prefsdb were tried and ran past 600 s; the rest were not tried.
+## gcc -fanalyzer stopped at its budget: for some paths of the file (the record at line 0), or at the program point named. These are not defect reports; what was analysed is clean. A raised budget (see analyzer-budget) was tried for every file in Src/ (TimePrefsHandler.cpp at -O0 only) and did not help for these: the analyzer still stopped early, ran past the time or memory cap, or GCC 15.3 crashed at -O2. PrefsDb.cpp at -O2 has stopped early since restoreKeys() was added; the raised budget was tried for it and it still stopped early. Of the test sources, test_json and test_prefsdb were tried and ran past 600 s; the rest were not tried.
 gcc -fanalyzer -O0	warning	Src/DeviceInfoService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O0	warning	Src/LocalePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O0	warning	Src/NTPClock.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
@@ -52,6 +57,8 @@ gcc -fanalyzer -O0	warning	Src/TimeZoneService.cpp	-Wanalyzer-too-complex	analys
 gcc -fanalyzer -O0	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O0	warning	Src/Utils.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O0	warning	Src/WallpaperPrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_backupdbpath.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O0	warning	tests/unit/test_backuprestore.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O0	warning	tests/unit/test_json.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O0	warning	tests/unit/test_prefsdb.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O0	warning	tests/unit/test_prefsfactory.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
@@ -70,6 +77,8 @@ gcc -fanalyzer -O2	warning	Src/LocalePrefsHandler.cpp	-Wanalyzer-too-complex	ana
 gcc -fanalyzer -O2	warning	Src/NTPClock.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O2	warning	Src/NetworkConnectionListener.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O2	warning	Src/OsInfoService.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	Src/PrefsDb.cpp	-Wanalyzer-too-complex	analysis bailed out early (6476 'after-snode' enodes; 19770 enodes)
+gcc -fanalyzer -O2	warning	Src/PrefsDb.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O2	warning	Src/PrefsFactory.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O2	warning	Src/PrefsFactory.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 854 stmt: 0):  LS::Error::~Error (&error);EN: 25253-25255, EN: 25399-25401, EN: 25546-25547
 gcc -fanalyzer -O2	warning	Src/RingtonePrefsHandler.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
@@ -106,6 +115,10 @@ gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating a
 gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 443 stmt: 0):  if (i_115 < _287)EN: 7154-7160, EN: 7173
 gcc -fanalyzer -O2	warning	Src/TzParser.cpp	-Wanalyzer-too-complex	terminating analysis for this program point: callstring: [] before (SN: 451 stmt: 0):  if (stored_107 <= 8)EN: 3511-3513, EN: 7322, EN: 7668, EN: 7686, EN: 7704, EN: 7722
 gcc -fanalyzer -O2	warning	Src/UrlRep.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	tests/unit/TempDir.h	-Wanalyzer-too-complex	analysis bailed out early (11046 'after-snode' enodes; 31011 enodes)
+gcc -fanalyzer -O2	warning	tests/unit/TempDir.h	-Wanalyzer-too-complex	analysis bailed out early (20156 'after-snode' enodes; 56780 enodes)
+gcc -fanalyzer -O2	warning	tests/unit/test_backupdbpath.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
+gcc -fanalyzer -O2	warning	tests/unit/test_backuprestore.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O2	warning	tests/unit/test_prefsfactory.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O2	warning	tests/unit/test_settings.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
 gcc -fanalyzer -O2	warning	tests/unit/test_tzparser.cpp	-Wanalyzer-too-complex	analysis stopped at its budget for some program points
