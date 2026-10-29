@@ -21,8 +21,10 @@
 #include <list>
 #include <string>
 #include <memory>
+#include <vector>
 
 #include "Singleton.h"
+#include "TimeChangeLaunch.h"
 
 #include <luna-service2/lunaservice.h>
 
@@ -60,6 +62,21 @@ public:
 	                               const std::function<bool(const std::string&, const std::string&)>& accept =
 	                                   std::function<bool(const std::string&, const std::string&)>());
 
+	/// The filter postRestore passes to restoreFromBackupDb(): a value has
+	/// to pass its key's handler, as with setPreferences. timeChangeLaunch is
+	/// never stored as it is: its valid entries (TimeChangeLaunch::parse) are
+	/// held back for restoreTimeChangeLaunch().
+	static bool acceptRestoredPref(const std::string& key, const std::string& value);
+
+	/// Adds the held-back timeChangeLaunch entries whose app is installed in
+	/// one of appDirs to db, through TimeChangeLaunch::add() - what
+	/// setTimeChangeLaunch does. The others stay held back, or, when final
+	/// (restoreFinished), are dropped with a log line.
+	void restoreTimeChangeLaunch(PrefsDb& db, const std::vector<std::string>& appDirs, bool final);
+
+	/// The timeChangeLaunch entries held back now.
+	const std::vector<TimeChangeLaunch::Entry>& pendingTimeChangeLaunch() const { return m_pendingTimeChangeLaunch; }
+
 private:
 	BackupManager();
 
@@ -71,11 +88,16 @@ private:
 
 	std::unique_ptr<PrefsDb> m_p_backupDb;
 
+	/// timeChangeLaunch entries from the last postRestore whose app was not
+	/// installed yet; retried, then dropped, on restoreFinished
+	std::vector<TimeChangeLaunch::Entry> m_pendingTimeChangeLaunch;
+
 	void copyKeysToBackupDb();
 	void initFilesForBackup(bool useFullPath);
 
 	static bool preBackupCallback( LSHandle* lshandle, LSMessage *message, void *user_data);
 	static bool postRestoreCallback( LSHandle* lshandle, LSMessage *message, void *user_data);
+	static bool restoreFinishedCallback( LSHandle* lshandle, LSMessage *message, void *user_data);
 
 	/// sendPreBackupResponse - made to take a fileList param so as to allow m_backupFiles to be unmodded in case
 	// 							a temporary alternate list is to be used; this gives max flexibility

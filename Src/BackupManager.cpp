@@ -32,6 +32,7 @@
 #include "Utils.h"
 #include "Settings.h"
 #include "JSONUtils.h"
+#include "TimeChangeLaunch.h"
 
 using namespace pbnjson;
 
@@ -57,6 +58,7 @@ std::string BackupManager::s_backupKeylistFilename = WEBOS_INSTALL_WEBOS_SYSCONF
 LSMethod BackupManager::s_BackupServerMethods[]  = {
 	{ "preBackup"  , BackupManager::preBackupCallback, LUNA_METHOD_FLAGS_NONE },
 	{ "postRestore", BackupManager::postRestoreCallback, LUNA_METHOD_FLAGS_NONE },
+	{ "restoreFinished", BackupManager::restoreFinishedCallback, LUNA_METHOD_FLAGS_NONE },
 	{ nullptr, nullptr, LUNA_METHOD_FLAGS_NONE }
 };
 
@@ -110,6 +112,8 @@ void BackupManager::copyKeysToBackupDb()
 
 	m_p_backupDb->copyKeys(PrefsDb::instance(), keylist);
 }
+
+static const char s_timeChangeLaunchKey[] = "timeChangeLaunch";
 
 namespace {
 
@@ -191,8 +195,16 @@ int BackupManager::restoreFromBackupDb(PrefsDb& target, const std::string& backu
 // A restored value has to pass the same check setPreferences applies: the
 // key's handler validates it, as if an app had sent it (non-empty origin).
 // A key without a handler is stored as it is, as setPreferences does.
-static bool acceptRestoredPref(const std::string& key, const std::string& value)
+// timeChangeLaunch, which setPreferences never accepts, is not stored here:
+// its entries are checked one by one and added once their app is installed
+// (restoreTimeChangeLaunch()).
+bool BackupManager::acceptRestoredPref(const std::string& key, const std::string& value)
 {
+	if (key == s_timeChangeLaunchKey) {
+		BackupManager::instance()->m_pendingTimeChangeLaunch = TimeChangeLaunch::parse(value);
+		return false;
+	}
+
 	auto handler = PrefsFactory::instance()->getPrefsHandler(key);
 	if (!handler)
 		return true;
@@ -415,6 +427,9 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
 	std::string tempDir = root["tempDir"].asString();
 	JValue files = root["files"];
 
+	// a new restore starts with nothing pending from an earlier one
+	BackupManager::instance()->m_pendingTimeChangeLaunch.clear();
+
 	for (const JValue &file: files.items())
 	{
 		std::string path = file.isString() ? file.asString() : "";
@@ -443,7 +458,7 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
 		}
 
 		// only the keys a backup holds, never the whole file
-		int rc = restoreFromBackupDb(*PrefsDb::instance(), dbPath, s_backupKeylistFilename, acceptRestoredPref);
+		int rc = restoreFromBackupDb(*PrefsDb::instance(), dbPath, s_backupKeylistFilename, BackupManager::acceptRestoredPref);
 		if (rc <= 0)
 		{
 			PmLogWarning(sysServiceLogContext(),"ERROR_OR_EMPTY_BACKUP",0,"nothing restored from [%s]...could be an error or just an empty backup db",dbPath.c_str());
@@ -452,10 +467,76 @@ bool BackupManager::postRestoreCallback( LSHandle* lshandle, LSMessage *message,
 
 	// if for whatever reason the main db got closed, reopen it (the function will act ok if already open)
 	PrefsDb::instance()->openPrefsDb();
+
+	// timeChangeLaunch entries for apps that are installed now; the others
+	// wait for restoreFinished, as the backup service reinstalls apps after
+	// postRestore
+	BackupManager::instance()->restoreTimeChangeLaunch(*PrefsDb::instance(), TimeChangeLaunch::defaultAppDirs(), false);
+
 	//now refresh all the keys
 	PrefsFactory::instance()->refreshAllKeys();
 
 	sendPostRestoreResponse(lshandle,message);
+	return true;
+}
+
+void BackupManager::restoreTimeChangeLaunch(PrefsDb& db, const std::vector<std::string>& appDirs, bool final)
+{
+	if (m_pendingTimeChangeLaunch.empty())
+		return;
+
+	m_pendingTimeChangeLaunch = TimeChangeLaunch::addInstalled(db, m_pendingTimeChangeLaunch, appDirs);
+	if (!final) {
+		if (!m_pendingTimeChangeLaunch.empty())
+			PmLogInfo(sysServiceLogContext(), "TIME_CHANGE_LAUNCH_PENDING", 0,
+			          "%zu timeChangeLaunch entries wait for their app to be reinstalled (restoreFinished)",
+			          m_pendingTimeChangeLaunch.size());
+		return;
+	}
+
+	for (const TimeChangeLaunch::Entry& entry : m_pendingTimeChangeLaunch)
+		PmLogWarning(sysServiceLogContext(), "TIME_CHANGE_LAUNCH_ENTRY_DROPPED", 0,
+		             "%s is not installed after the restore; its timeChangeLaunch entry is dropped",
+		             entry.appId.c_str());
+	m_pendingTimeChangeLaunch.clear();
+}
+
+/*! \page com_palm_systemservice_backup
+\n
+\section com_palm_systemservice_restore_finished restoreFinished
+
+\e Public.
+
+com.webos.service.systemservice/backup/restoreFinished
+
+Called by the backup service when a restore is complete, after it has
+reinstalled apps. Restores the timeChangeLaunch entries postRestore held back
+because their app was not installed yet; entries whose app is still not
+installed are dropped.
+
+\subsection com_palm_systemservice_restore_finished_syntax Syntax:
+\code
+{
+}
+\endcode
+
+\subsection com_palm_systemservice_restore_finished_returns Returns:
+\code
+{
+	"returnValue": boolean
+}
+\endcode
+*/
+bool BackupManager::restoreFinishedCallback(LSHandle* lshandle, LSMessage *message, void * /*user_data*/)
+{
+	LSMessageJsonParser parser(message, RELAXED_SCHEMA(""));
+	if (!parser.parse(__FUNCTION__, lshandle, EValidateAndErrorAlways))
+		return true;
+
+	BackupManager::instance()->restoreTimeChangeLaunch(*PrefsDb::instance(), TimeChangeLaunch::defaultAppDirs(), true);
+	PrefsFactory::instance()->refreshAllKeys();
+
+	sendPostRestoreResponse(lshandle, message);
 	return true;
 }
 

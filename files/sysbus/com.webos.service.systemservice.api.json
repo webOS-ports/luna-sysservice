@@ -2,6 +2,7 @@
   "systemsettings.management": [
         "com.webos.service.systemservice/backup/postRestore",
         "com.webos.service.systemservice/backup/preBackup",
+        "com.webos.service.systemservice/backup/restoreFinished",
         "com.webos.service.systemservice/clock/setTime",
         "com.webos.service.systemservice/ringtone/addRingtone",
         "com.webos.service.systemservice/ringtone/deleteRingtone",
