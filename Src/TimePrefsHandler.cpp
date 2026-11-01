@@ -16,6 +16,7 @@
 
 
 #include "TimePrefsHandler.h"
+#include "TimeChangeLaunch.h"
 
 #include <glib.h>
 #include <stdlib.h>
@@ -3849,7 +3850,6 @@ bool TimePrefsHandler::cbSetTimeChangeLaunch(LSHandle* lsHandle, LSMessage *mess
 											 void * /*user_data*/)
 {
 	JValue tmpJson_listArray;
-	JValue storedJson_listObject;
 
 	JValue label;
 	std::string errorText;
@@ -3888,12 +3888,7 @@ bool TimePrefsHandler::cbSetTimeChangeLaunch(LSHandle* lsHandle, LSMessage *mess
 
 	//get the launchList array object out of it
 	JValue storedJson_listArray = storedJson["launchList"];
-	if (!storedJson_listArray.isValid() && active) {
-		//nothing in the list yet, and I need to add...
-		storedJson_listArray = JArray();
-		storedJson.put("launchList", storedJson_listArray);
-	}
-	else if (!storedJson_listArray.isValid() && !active) {
+	if (!storedJson_listArray.isValid() && !active) {
 		//nothing in the list yet, and I was told to remove; nothing to do, so just go to Done
 		errorText = "cannot deactivate an appId that isn't in the list";
 		goto Done;
@@ -3902,37 +3897,9 @@ bool TimePrefsHandler::cbSetTimeChangeLaunch(LSHandle* lsHandle, LSMessage *mess
 		//list exists, and I have to remove
 		goto Remove;
 	}
-	//else, Add
-	goto Add;		//making it explicit
-
-Add:
-	//go through the array and try and find the appid (if it's in there already)
-	for (const JValue key: storedJson_listArray.items()) {
-
-		label = key["appId"];
-		if (!label.isString()) {
-			continue; //something really bad happened; something was stored in the list w/o an appId!
-		}
-		std::string foundAppId = label.asString();
-		if (appId == foundAppId)
-		{
-			storedJson_listObject = key;
-			break;
-		}
-	}
-
-	if (storedJson_listObject.isValid() && !storedJson_listObject.isNull()) {
-		//found it...
-		//json_object_object_add(storedJson_listObject,(char *)"parameters",json_object_new_string(params.c_str()));
-		storedJson_listObject.put("parameters", params);
-	}
-	else {
-		//create a new object, populate, and add it to the array
-		storedJson_listObject = JObject {{"appId", appId}, {"parameters", params}};
-		storedJson_listArray.append(storedJson_listObject);
-	}
-
-	goto Store;
+	//else, Add: the same code path a backup restore uses
+	(void) TimeChangeLaunch::add(*PrefsDb::instance(), appId, params);
+	goto Done;
 
 Remove:
 

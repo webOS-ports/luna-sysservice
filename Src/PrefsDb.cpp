@@ -16,6 +16,7 @@
 
 
 #include <assert.h>
+#include <limits.h>
 #include <pbnjson.hpp>
 #include <glib.h>
 #include <string.h>
@@ -318,6 +319,96 @@ int PrefsDb::copyKeys(PrefsDb * p_sourceDb,const std::list<std::string>& keys,bo
 			}
 		}
 	}
+	return n;
+}
+
+// Opens a database file that came from outside (a backup) for reading only.
+// It is never written, a symlink in its place is refused, and what its schema
+// could run is switched off: views, triggers, and functions that are not
+// marked innocuous. nullptr when the file cannot be opened that way or fails
+// sqlite's quick check.
+static sqlite3* openUntrustedDb(const std::string& filename)
+{
+	sqlite3* db = nullptr;
+	int ret = sqlite3_open_v2(filename.c_str(), &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOFOLLOW, nullptr);
+	if (ret != SQLITE_OK) {
+		sqlite3_close(db);
+		return nullptr;
+	}
+
+	static const int s_off[] = { SQLITE_DBCONFIG_TRUSTED_SCHEMA, SQLITE_DBCONFIG_ENABLE_VIEW,
+	                             SQLITE_DBCONFIG_ENABLE_TRIGGER };
+	bool configured = sqlite3_db_config(db, SQLITE_DBCONFIG_DEFENSIVE, 1, static_cast<int*>(nullptr)) == SQLITE_OK;
+	for (int op : s_off)
+		configured = configured && sqlite3_db_config(db, op, 0, static_cast<int*>(nullptr)) == SQLITE_OK;
+	if (!configured) {
+		sqlite3_close(db);
+		return nullptr;
+	}
+
+	sqlite3_stmt* check = nullptr;
+	bool ok = sqlite3_prepare_v2(db, "PRAGMA quick_check", -1, &check, nullptr) == SQLITE_OK &&
+	          sqlite3_step(check) == SQLITE_ROW;
+	if (ok) {
+		const unsigned char* res = sqlite3_column_text(check, 0);
+		ok = res && strcmp(reinterpret_cast<const char*>(res), "ok") == 0;
+	}
+	sqlite3_finalize(check);
+	if (!ok) {
+		sqlite3_close(db);
+		return nullptr;
+	}
+	return db;
+}
+
+int PrefsDb::restoreKeys(const std::string& backupDbFilename, const std::list<std::string>& keys,
+                         const RestoreFilter& accept)
+{
+	if (!m_prefsDb)
+		return -1;
+
+	sqlite3* src = openUntrustedDb(backupDbFilename);
+	if (!src) {
+		PmLogWarning(sysServiceLogContext(), "RESTORE_DB_UNREADABLE", 0,
+		             "cannot read [%s] as a backup database; nothing restored", backupDbFilename.c_str());
+		return -1;
+	}
+
+	sqlite3_stmt* select = nullptr;
+	if (sqlite3_prepare_v2(src, "SELECT value FROM Preferences WHERE key = ?1", -1, &select, nullptr) != SQLITE_OK) {
+		PmLogWarning(sysServiceLogContext(), "RESTORE_DB_UNREADABLE", 0,
+		             "[%s] has no readable Preferences table: %s; nothing restored",
+		             backupDbFilename.c_str(), sqlite3_errmsg(src));
+		sqlite3_finalize(select);
+		sqlite3_close(src);
+		return -1;
+	}
+
+	int n = 0;
+	for (const std::string& key : keys) {
+		if (key.empty() || key.size() > static_cast<size_t>(INT_MAX))
+			continue;
+		sqlite3_reset(select);
+		if (sqlite3_bind_text(select, 1, key.data(), static_cast<int>(key.size()), SQLITE_TRANSIENT) != SQLITE_OK)
+			continue;
+		if (sqlite3_step(select) != SQLITE_ROW)
+			continue;
+		const unsigned char* res = sqlite3_column_text(select, 0);
+		if (!res)
+			continue;
+		std::string value(reinterpret_cast<const char*>(res));
+		if (accept && !accept(key, value)) {
+			PmLogWarning(sysServiceLogContext(), "RESTORE_KEY_REFUSED", 0,
+			             "backed-up value for [%s] refused; not restored", key.c_str());
+			continue;
+		}
+		if (setPref(key, value))
+			++n;
+	}
+
+	sqlite3_finalize(select);
+	sqlite3_close(src);
+	PmLogDebug(sysServiceLogContext(), "restored %d of %zu keys from [%s]", n, keys.size(), backupDbFilename.c_str());
 	return n;
 }
 

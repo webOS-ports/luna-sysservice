@@ -103,6 +103,7 @@ set(SOURCE_FILES Src/Logging.cpp
     Src/PrefsDb.cpp
     Src/PrefsFactory.cpp
     Src/TimePrefsHandler.cpp
+    Src/TimeChangeLaunch.cpp
     Src/BroadcastTime.cpp
     Src/BroadcastTimeHandler.cpp
     Src/UrlRep.cpp

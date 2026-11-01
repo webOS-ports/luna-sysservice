@@ -54,6 +54,10 @@ removes them afterwards. The TzParser tests read the host's
 | `test_urlrep.cpp` | `UrlRep::fromUrl` on the urls apps send (wallpaper, ringtone, image paths): components, query parsing, unescaping, invalid input; `escape`/`unescape` |
 | `test_tzparser.cpp` | `parseTimeZone` against real tzdata: transitions, offsets, abbreviations, the `Etc/` fallback, and that a zone name cannot leave `/usr/share/zoneinfo` (`..`, `/.`, leading `.`) |
 | `test_json.cpp` | the schema macros every method validates its payload with (strict, relaxed, nested), the `JsonMessageParser` getters, `createJsonReply`; the timeZone json helpers of `TimePrefsHandler` |
+| `test_backuprestore.cpp` | what `postRestore` takes from a backup: only the keys in the backup key list (none when the list is missing or not an array), key names that attempt SQL injection, the filter a restored value must pass, a backup db that is only read (no symlink, no view, not a database, nor one failing sqlite's quick check) |
+| `test_backupdbpath.cpp` | which `postRestore` `files` entry names the backup db: the exact file name, no `..` or NUL, under `tempDir` once resolved (not a sibling sharing its prefix), no symlink, a regular file, an absolute `tempDir` |
+| `test_timechangelaunch.cpp` | what a backed-up `timeChangeLaunch` value is taken apart into: the app ids accepted, the stored shape (a `launchList` of objects with an `appId` and object `parameters`), entries dropped one by one, the first entry for an app id kept; `add()`, the code `setTimeChangeLaunch` stores through |
+| `test_timechangelaunch_restore.cpp` | which restored entries are added: an app installed in one of the app dirs (its `appinfo.json` a regular file naming that id), entries held back by `postRestore` until `restoreFinished`, then dropped |
 | `test_prefsdb.cpp` | `PrefsDb` on a scratch database: set/get, `getPrefs`, `getAllPrefs`, `copyKeys`, `merge`, with keys, values and file names that attempt SQL injection |
 | `test_utils.cpp` | splitting and trimming, `fileCopy` (never truncates the target on a missing source, never writes through a symlink, reports a write that fails on the final flush), `createTempFile`, `extractFromJson` |
 | `test_time.cpp` | `TimePrefsHandler::convertDate` (conversion, bad input, TZ left set or unset as it was, repeated conversions) and `zoneAbbreviation` |
@@ -81,6 +85,26 @@ back the old code makes `test_time`, `test_prefsfactory`, `test_settings`,
 stale read happens inside the C library. Two fixes have no failing test:
 `isspace()`/`tolower()` on a plain `char` behave the same on glibc, whose
 ctype tables accept negative indices.
+
+The restore tests (`test_backuprestore.cpp`, `test_backupdbpath.cpp`) were
+checked the same way: of 19 mutations, 16 were caught. Three survive, and
+none can be seen from a test:
+
+- turning off defensive mode, or leaving `trusted_schema` on, for the
+  backup's connection. It is read-only, and with views and triggers off
+  nothing left in a crafted schema runs a function on a plain
+  `SELECT ... WHERE key = ?`. They stay as defence in depth.
+- dropping the empty-key-list branch of `restoreFromBackupDb`:
+  `restoreKeys` stores nothing for an empty list either.
+
+The `timeChangeLaunch` restore tests (`test_timechangelaunch.cpp`,
+`test_timechangelaunch_restore.cpp`) were checked the same way: all 14
+mutations were caught (app id rules, each per-entry drop in `parse`, the
+symlink, path and `id` checks of `isInstalled`, `add` keeping one entry per
+app id, the backed-up value stored as it is, entries dropped at
+`postRestore` instead of held back, held-back entries kept after
+`restoreFinished`). The `postRestoreCallback`/`restoreFinishedCallback` glue
+and `setTimeChangeLaunch` itself need an LS2 message and have no unit test.
 
 ## Static analysis (`hardening/static-analysis.sh`)
 
