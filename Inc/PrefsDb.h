@@ -18,6 +18,7 @@
 #ifndef PREFSDB_H
 #define PREFSDB_H
 
+#include <functional>
 #include <string>
 #include <map>
 #include <list>
@@ -44,10 +45,24 @@ public:
 	std::map<std::string, std::string> getPrefs(const std::list<std::string>& keys);	
 	std::map<std::string,std::string> getAllPrefs();
 
+	// merge() copies every row of the other database, so it is only for a
+	// database this service wrote itself. A backup is restored with
+	// restoreKeys().
 	int merge(const PrefsDb * p_sourceDb,bool overwriteSameKeys=true);
 	int merge(const std::string& sourceDbFilename,bool overwriteSameKeys=true);
 
 	int copyKeys(PrefsDb * p_sourceDb,const std::list<std::string>& keys,bool overwriteSameKeys=true);
+
+	/// Asked for each (key, value) a restore found; false skips the key.
+	typedef std::function<bool(const std::string& key, const std::string& value)> RestoreFilter;
+
+	/// Copies the listed keys from an untrusted database file into this one,
+	/// overwriting what is there. The file is opened read-only, a symlink is
+	/// not followed, and its schema is not trusted (no views, triggers or
+	/// unsafe functions). Every other row is ignored. Returns the number of
+	/// keys stored, or -1 when the file cannot be read.
+	int restoreKeys(const std::string& backupDbFilename, const std::list<std::string>& keys,
+	                const RestoreFilter& accept = RestoreFilter());
 
 	const std::string& databaseFile() const
 	{ return m_dbFilename; }

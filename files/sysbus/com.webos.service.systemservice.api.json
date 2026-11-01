@@ -2,6 +2,7 @@
   "systemsettings.management": [
         "com.webos.service.systemservice/backup/postRestore",
         "com.webos.service.systemservice/backup/preBackup",
+        "com.webos.service.systemservice/backup/restoreFinished",
         "com.webos.service.systemservice/clock/setTime",
         "com.webos.service.systemservice/ringtone/addRingtone",
         "com.webos.service.systemservice/ringtone/deleteRingtone",
@@ -50,5 +51,11 @@
         "com.webos.service.image/convert",
         "com.webos.service.image/imageInfo",
         "com.webos.service.image/resize"
+  ],
+  "image.convert": [
+        "com.webos.service.image/convert"
+  ],
+  "image.ezresize": [
+        "com.webos.service.image/ezResize"
   ]
 }

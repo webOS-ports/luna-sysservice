@@ -5,5 +5,7 @@
     "software.query" : ["dev"],
     "time.management" : ["oem"],
     "time.query" : ["dev"],
-    "image.management" : ["dev"]
+    "image.management" : ["dev"],
+    "image.convert" : ["dev"],
+    "image.ezresize" : ["dev"]
 }

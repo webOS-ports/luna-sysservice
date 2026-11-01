@@ -17,11 +17,14 @@
 #ifndef BACKUP_MANAGER_H
 #define BACKUP_MANAGER_H
 
+#include <functional>
 #include <list>
 #include <string>
 #include <memory>
+#include <vector>
 
 #include "Singleton.h"
+#include "TimeChangeLaunch.h"
 
 #include <luna-service2/lunaservice.h>
 
@@ -38,6 +41,42 @@ public:
 	void turnOnBackup() { m_doBackupFiles = true; }
 	bool isBackupOn() const { return m_doBackupFiles; }
 
+	/// The keys a backup holds: the strings in the json array in
+	/// keylistFile (other entries are skipped). false, with keys empty, when
+	/// the file is missing or does not hold an array.
+	static bool readBackupKeylist(const std::string& keylistFile, std::list<std::string>& keys);
+
+	/// The backup database a postRestore "files" entry names, as a real path
+	/// under tempDir, or "" when the entry is not one to restore from: its
+	/// name is not exactly the backup db's, it has a ".." or a NUL, it is
+	/// not under tempDir once resolved, or it is not a regular file (a
+	/// symlink is refused). A relative entry is taken relative to tempDir.
+	static std::string backupDbPath(const std::string& tempDir, const std::string& entry);
+
+	/// Restores into target the keys listed in keylistFile - the same list
+	/// preBackup copies - from the backup database at backupDb. Nothing is
+	/// restored when the list cannot be read. Returns the number of keys
+	/// restored, or -1 when the list or the database cannot be read.
+	static int restoreFromBackupDb(PrefsDb& target, const std::string& backupDb,
+	                               const std::string& keylistFile,
+	                               const std::function<bool(const std::string&, const std::string&)>& accept =
+	                                   std::function<bool(const std::string&, const std::string&)>());
+
+	/// The filter postRestore passes to restoreFromBackupDb(): a value has
+	/// to pass its key's handler, as with setPreferences. timeChangeLaunch is
+	/// never stored as it is: its valid entries (TimeChangeLaunch::parse) are
+	/// held back for restoreTimeChangeLaunch().
+	static bool acceptRestoredPref(const std::string& key, const std::string& value);
+
+	/// Adds the held-back timeChangeLaunch entries whose app is installed in
+	/// one of appDirs to db, through TimeChangeLaunch::add() - what
+	/// setTimeChangeLaunch does. The others stay held back, or, when final
+	/// (restoreFinished), are dropped with a log line.
+	void restoreTimeChangeLaunch(PrefsDb& db, const std::vector<std::string>& appDirs, bool final);
+
+	/// The timeChangeLaunch entries held back now.
+	const std::vector<TimeChangeLaunch::Entry>& pendingTimeChangeLaunch() const { return m_pendingTimeChangeLaunch; }
+
 private:
 	BackupManager();
 
@@ -49,11 +88,16 @@ private:
 
 	std::unique_ptr<PrefsDb> m_p_backupDb;
 
+	/// timeChangeLaunch entries from the last postRestore whose app was not
+	/// installed yet; retried, then dropped, on restoreFinished
+	std::vector<TimeChangeLaunch::Entry> m_pendingTimeChangeLaunch;
+
 	void copyKeysToBackupDb();
 	void initFilesForBackup(bool useFullPath);
 
 	static bool preBackupCallback( LSHandle* lshandle, LSMessage *message, void *user_data);
 	static bool postRestoreCallback( LSHandle* lshandle, LSMessage *message, void *user_data);
+	static bool restoreFinishedCallback( LSHandle* lshandle, LSMessage *message, void *user_data);
 
 	/// sendPreBackupResponse - made to take a fileList param so as to allow m_backupFiles to be unmodded in case
 	// 							a temporary alternate list is to be used; this gives max flexibility
