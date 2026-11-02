@@ -51,5 +51,11 @@
         "com.webos.service.image/convert",
         "com.webos.service.image/imageInfo",
         "com.webos.service.image/resize"
+  ],
+  "image.convert": [
+        "com.webos.service.image/convert"
+  ],
+  "image.ezresize": [
+        "com.webos.service.image/ezResize"
   ]
 }
